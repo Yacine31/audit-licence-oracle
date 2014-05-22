@@ -16,6 +16,7 @@ tDB=$PROJECT_NAME"_db"      # table qui contient les donnees db
 tCPU=$PROJECT_NAME"_cpu"    # table qui contient les donnees des serveurs
 tSegments=$PROJECT_NAME"_segments"  # table qui contient les objets partitionés
 tDbaFeature=$PROJECT_NAME"_dba_feature"  # table qui contient les options et packs utilisés
+tVersion=$PROJECT_NAME"_version"  # table qui contient les versions
 
 
 
@@ -40,10 +41,11 @@ echo "------------"
 echo "Liste des serveurs en Standard Edition"
 echo "------------"
 
-mysql -uroot -proot --local-infile --database=test -e "
-SELECT distinct cpu.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS, cpu.Socket   
-FROM $tCPU cpu, $tDB db
-where cpu.Host_Name=db.Host_Name and db.DB_Edition='Standard'
+mysql -uroot -proot --local-infile --database=$DB -e "
+SELECT distinct v.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS, cpu.Socket   
+FROM $tVersion v left join $tCPU cpu 
+on cpu.Host_Name=v.Host_Name 
+where v.banner like '%Oracle%' and v.banner not like '%Enterprise%'
 order by cpu.Marque, cpu.Host_Name, cpu.os;
 "
 
@@ -51,17 +53,17 @@ echo "------------"
 echo "Liste des serveurs en Enterprise Edition"
 echo "------------"
 
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 SELECT distinct db.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS, cpu.Processor_Type,
 cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores 
 FROM $tDB db left join $tCPU cpu 
 on cpu.Host_Name=db.Host_Name
 where db.DB_Edition='Enterprise' 
--- and cpu.os not like '%AIX%' 
+and cpu.os not like '%AIX%' 
 order by cpu.Marque, cpu.Host_Name, cpu.os;
 "
 
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 SELECT distinct cpu.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS, cpu.Processor_Type,
 -- cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores, 
 cpu.Node_Name, cpu.Partition_Name, cpu.Partition_Number,
@@ -75,7 +77,7 @@ order by cpu.Marque, cpu.Host_Name, cpu.os;
 echo "------------"
 echo "Liste des serveurs avec option RAC en Enterprise Edition"
 echo "------------"
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 SELECT distinct cpu.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS, cpu.Processor_Type,
 cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores 
 FROM $tDB db left join $tCPU cpu 
@@ -83,7 +85,7 @@ on cpu.Host_Name=db.Host_Name
 where db.DB_Edition='Enterprise' and db.RAC not in ('FALSE','') and cpu.os not like '%AIX%'
 order by cpu.Marque, cpu.os, cpu.Host_Name;
 "
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 SELECT distinct cpu.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS, cpu.Processor_Type,
 -- cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores,
 cpu.Node_Name, cpu.Partition_Name, cpu.Partition_Number,
@@ -102,7 +104,7 @@ echo "------------"
 
 # jointure avec la table des objets partionnés
 # serveurs non AIX
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 SELECT distinct seg.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS, cpu.Processor_Type,
 cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores
 FROM $tCPU cpu, $tSegments seg, $tDB db
@@ -120,7 +122,7 @@ order by cpu.Marque, cpu.Host_Name, cpu.os
 "
 
 # serveurs AIX
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 SELECT distinct seg.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS, cpu.Processor_Type,
 cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores
 FROM $tCPU cpu, $tSegments seg, $tDB db
@@ -142,7 +144,7 @@ echo "------------"
 echo "Liste des bases avec objets partitionnés"
 echo "Les comptes $SQL_NOT_IN ne sont pas pris en compte"
 echo "------------"
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 select host_name, instance_name, owner,
 -- segment_type, 
 count(*) from $tSegments 
@@ -158,7 +160,7 @@ order by host_name, instance_name, owner
 echo "------------"
 echo "Liste des serveurs avec option OLAP en Enterprise Edition"
 echo "------------"
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 SELECT distinct cpu.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS,cpu.Processor_Type,
 cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores
 FROM $tCPU cpu, $tDB db
@@ -167,7 +169,7 @@ and db.OLAP_Installed='TRUE' and (db.OLAP_Cubes not in ('','0','-942') or db.Ana
 order by cpu.Marque, cpu.Host_Name, cpu.os;
 "
 
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 SELECT distinct cpu.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS,cpu.Processor_Type,
 cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores,
 cpu.Partition_Type,cpu.Partition_Mode, cpu.Entitled_Capacity, cpu.Active_CPUs_in_Pool, cpu.Online_Virtual_CPUs
@@ -181,7 +183,7 @@ order by cpu.Marque, cpu.Host_Name, cpu.os;
 echo "------------"
 echo "Liste des serveurs avec option DATAMINING en Enterprise Edition"
 echo "------------"
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 SELECT distinct cpu.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS,cpu.Processor_Type,
 cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores
 FROM $tCPU cpu, $tDB db
@@ -189,7 +191,7 @@ where cpu.Host_Name=db.Host_Name and db.DB_Edition='Enterprise' and cpu.os not l
 and db.Data_Mining!=''
 order by cpu.Marque, cpu.Host_Name, cpu.os;
 "
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 SELECT distinct cpu.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS,cpu.Processor_Type,
 cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores,
 cpu.Partition_Type,cpu.Partition_Mode, cpu.Entitled_Capacity, cpu.Active_CPUs_in_Pool, cpu.Online_Virtual_CPUs
@@ -203,7 +205,7 @@ order by cpu.Marque, cpu.Host_Name, cpu.os;
 echo "------------"
 echo "Liste des serveurs avec option SPATIAL/LOCATOR en Enterprise Edition"
 echo "------------"
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 SELECT distinct cpu.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS,cpu.Processor_Type,
 cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores
 FROM $tCPU cpu, $tDB db
@@ -212,7 +214,7 @@ and db.Spatial_and_Locator!=''
 order by cpu.Marque, cpu.Host_Name, cpu.os;
 "
 
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 SELECT distinct cpu.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS,cpu.Processor_Type,
 cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores,
 cpu.Partition_Type,cpu.Partition_Mode, cpu.Entitled_Capacity, cpu.Active_CPUs_in_Pool, cpu.Online_Virtual_CPUs
@@ -228,7 +230,7 @@ echo "------------"
 echo "Liste des serveurs qui utilisent TUNING PACK"
 echo "------------"
 
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 SELECT distinct cpu.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS,cpu.Processor_Type,
 cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores
 FROM $tCPU cpu, $tDB db
@@ -238,7 +240,7 @@ and db.Tuning_Pack_Used!='0'
 order by cpu.Marque, cpu.os, cpu.Host_Name;
 "
 
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 SELECT distinct cpu.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS,cpu.Processor_Type,
 cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores,
 cpu.Partition_Type,cpu.Partition_Mode, cpu.Entitled_Capacity, cpu.Active_CPUs_in_Pool, cpu.Online_Virtual_CPUs
@@ -263,7 +265,7 @@ echo "------------"
 echo "Liste des serveurs qui utilisent DIAGNOSTICS PACK"
 echo "------------"
 
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 SELECT distinct cpu.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS,cpu.Processor_Type,
 cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores
 FROM $tCPU cpu, $tDB db
@@ -274,7 +276,7 @@ and db.Diagnostics_Pack_Used!='0'
 order by cpu.Marque, cpu.Host_Name, cpu.os;
 "
 
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -uroot -proot --local-infile --database=$DB -e "
 SELECT distinct cpu.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 15) OS,cpu.Processor_Type,
 cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores,
 cpu.Partition_Type,cpu.Partition_Mode, cpu.Entitled_Capacity, cpu.Active_CPUs_in_Pool, cpu.Online_Virtual_CPUs
