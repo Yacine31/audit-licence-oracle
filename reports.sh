@@ -96,7 +96,7 @@ order by cpu.Marque, cpu.Host_Name, cpu.os;
 
 echo "------------"
 echo "Liste des serveurs avec option PARTITIONING en Enterprise Edition"
-export SQL_NOT_IN="('SYS','SYSTEM','SYSMAN')"
+export SQL_NOT_IN="('SYS','SYSTEM','SYSMAN','MDSYS')"
 echo "Les comptes $SQL_NOT_IN ne sont pas pris en compte"
 echo "------------"
 
