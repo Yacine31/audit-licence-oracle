@@ -4,7 +4,7 @@
 # 20/05/2014 - séparation des affichages pour AIX : les colonnes ne sont pas les mêmes
 # 22/05/2014 - modification des jointures (left join) pour prendre en compte les noms des serveurs
 #              même si les infos serveurs ne sont pas présentes.
-
+# 23/05/2014 - ajout de MDSYS aux compte exclus du partitioning
 
 # MYSQL_ARGS="--defaults-file=/etc/mysql/debian.cnf"
 DB="test"
