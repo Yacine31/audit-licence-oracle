@@ -20,10 +20,11 @@ PROJECT_NAME="$1"
 tDB=$PROJECT_NAME"_db"      # table qui contient les donnees db
 tCPU=$PROJECT_NAME"_cpu"    # table qui contient les donnees des serveurs
 tSegments=$PROJECT_NAME"_segments"  # table qui contient les objets partitionés
-tDbaFeature=$PROJECT_NAME"_dba_feature"  # table qui contient les options et packs utilisés
+tDbaFeatures=$PROJECT_NAME"_dba_feature"  # table qui contient les options et packs utilisés
 tVersion=$PROJECT_NAME"_version"  # table qui contient les versions
 tCPUAIX=$PROJECT_NAME"_cpu_aix"	  # table pour le calcul des CPUs Oracle pour les serveurs AIX
 tRAC=$PROJECT_NAME"_rac"	# table avec les données RAC : nodes_count != 1
+tSQLP=$PROJECT_NAME"_sqlprofiles"	# table avec les données SQL PROFILES
 
 #-----------------------------------
 # Cette fonction est spécifique au serveurs AIx,
@@ -56,7 +57,7 @@ end as Core_Count,
 -- on inverse la chaine et on regarde le premier caractère qui correspond au chiffre
 case left(reverse(Processor_Type),1)
         when 5 then @Core_Factor := 0.75
-        when 6 then @Core_Factor := 0.75
+        when 6 then @Core_Factor := 1
         when 7 then @Core_Factor := 1
 end as Core_Factor,
 CEILING(@Core_Count * @Core_Factor) as CPU_Oracle
@@ -70,7 +71,8 @@ drop table if exists cpu_oracle;
 create table cpu_oracle as 
 select
         physical_server,
-        sum(CPU_Oracle) 'Total_Proc_Oracle',
+        sum(CPU_Oracle) 'Total_Proc',
+	Core_Factor,
         Active_Physical_CPUs,
         if (sum(CPU_Oracle)<Active_Physical_CPUs,sum(CPU_Oracle),Active_Physical_CPUs) 'Proc_Oracle_Calcules'
 from $tCPUAIX
@@ -86,11 +88,14 @@ select concat('Total des processeurs Oracle : ', sum(Proc_Oracle_Calcules)) from
 
 
 # les clauses SQL communes à certaines requêtes :
+export ORDERBY="cpu.physical_server, db.host_name"
+
 export SELECT_EE_AIX="SELECT distinct
 cpu.physical_server 'Physical Server',
-cpu.Host_Name Host,
+-- cpu.Host_Name Host,
+db.Host_Name Host,
 cpu.Model,
-left(cpu.OS, 25) OS,
+cpu.OS,
 cpu.Processor_Type 'Proc Type',
 cpu.Partition_Number 'Part Nbr',
 cpu.Partition_Type 'Part Type',
@@ -103,8 +108,9 @@ cpu.Active_Physical_CPUs 'Act Phy CPU'
 
 export SELECT_EE_NON_AIX="
 SELECT distinct
-cpu.physical_server, db.Host_Name, cpu.Marque, cpu.Model, left(cpu.OS, 25) OS, cpu.Processor_Type,
-cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores
+cpu.physical_server, db.Host_Name, cpu.Marque, cpu.Model, cpu.OS, cpu.Processor_Type,
+cpu.Socket, cpu.Cores_per_Socket 
+-- ,  cpu.Total_Cores
 "
 
 
@@ -125,6 +131,22 @@ echo '----------------------------------------------'
 #-------------------------------------------------------------------------------
 # Infos générales 
 #-------------------------------------------------------------------------------
+mysql -ss -uroot -proot --local-infile --database=$DB -e "
+select '----------------------------------' from dual;
+select concat('Nombre de serveurs traités : ', count(*)) from $tCPU;
+select 'Répartition des serveurs par OS   : ' from dual;
+
+select count(*), os from $tCPU group by os;
+
+select '----------------------------------' from dual;
+select concat('Nombre de base de données  : ', count(*)) from $tDB;
+select 'Les bases par editions et par version : ' from dual;
+
+select count(*), DB_EDITION, DB_VERSION_MAJ from $tDB group by DB_EDITION, DB_VERSION_MAJ;
+select '----------------------------------' from dual;
+"
+
+
 echo "Les serveurs sans base de données"
 mysql -uroot -proot --local-infile --database=$DB -e "
 select Host_Name, os, Marque, Model, Processor_Type 
@@ -218,39 +240,26 @@ order by cpu.Machine_Serial_Number, cpu.Marque, cpu.Host_Name, cpu.os;
 # TODO : vérifier le résultat à afficher, la colonne OS pose pb avec la valeur NULL
 
 echo "------------------- NOUVEAU CALCUL ----------------"
-echo "--- Les lignes avec NULL comme valeur, indique des serveurs sans le résultats LMS_CPUQ "
+echo "--- Les lignes avec NULL comme valeur, indiquent des serveurs sans le résultats LMS_CPUQ "
 echo "---------------------------------------------------"
+
 mysql -uroot -proot --local-infile --database=$DB -e "
-SELECT distinct
-cpu.physical_server, r.node_name, cpu.Marque, cpu.Model, OS, cpu.Processor_Type,
-cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores 
-from  $tRAC r left join  $tCPU cpu
-on r.node_name=cpu.host_name
-where nodes_count!=1 
-and (OS!='AIX' or OS is null)
-order by r.node_name;
-"
-mysql -uroot -proot --local-infile --database=$DB -e "
-SELECT distinct
-cpu.physical_server 'Physical Server',
-cpu.Host_Name 'Host Name',
+select distinct 
+c.physical_server 'Physical Server',
+c.Host_Name 'Host Name',
 r.node_name 'Node name',
-cpu.Model,
-OS,
-cpu.Processor_Type 'Proc Type'
--- cpu.Partition_Number 'Part Nbr',
--- cpu.Partition_Type 'Part Type',
--- cpu.Partition_Mode 'Part Mode',
--- cpu.Entitled_Capacity 'EC',
--- cpu.Active_CPUs_in_Pool 'Act CPU',
--- cpu.Online_Virtual_CPUs 'OV CPU',
--- cpu.Active_Physical_CPUs 'Act Phy CPU'
-from  $tRAC r left join  $tCPU cpu
-on r.node_name=cpu.host_name
-where nodes_count!=1 
--- and (OS='AIX' or OS is null)
-order by r.node_name;
+-- r.instance_name, 
+d.db_edition 'Edition',
+c.Model,
+c.OS,
+c.Processor_Type 'Proc Type'
+from $tRAC r left join $tCPU c 
+	left join $tDB d on c.host_name=d.host_name 
+	on r.node_name=c.host_name 
+where r.nodes_count!=1
+order by r.node_name, d.db_edition;
 "
+
 
 # Option RAC : calcul des processeurs
 # export WHERE="db.DB_Edition='Enterprise' and db.v_opt_rac not in ('FALSE','') and cpu.os like '%AIX%'"
@@ -274,7 +283,8 @@ and db.DB_Edition='Enterprise'
 and cpu.os not like '%AIX%'
 and seg.owner not in $SQL_NOT_IN 
 group by seg.Host_Name, cpu.Marque, cpu.Model, cpu.OS, cpu.Processor_Type, 
-cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores
+cpu.Socket, cpu.Cores_per_Socket
+-- ,  cpu.Total_Cores
 having count(seg.Host_Name) > 0
 order by cpu.Marque, cpu.Host_Name, cpu.os
 ;
@@ -291,7 +301,8 @@ and cpu.os like '%AIX%'
 and seg.owner not in $SQL_NOT_IN
 -- and db.Partitioning!='0' 
 group by seg.Host_Name, cpu.Marque, cpu.Model, cpu.OS, cpu.Processor_Type, 
-cpu.Socket, cpu.Cores_per_Socket,  cpu.Total_Cores
+cpu.Socket, cpu.Cores_per_Socket
+-- ,  cpu.Total_Cores
 having count(seg.Host_Name) > 0
 order by cpu.Machine_Serial_Number, cpu.Marque, cpu.Host_Name, cpu.os
 ;
@@ -311,8 +322,9 @@ order by cpu.Marque, cpu.Host_Name, cpu.os;
 
 mysql -uroot -proot --local-infile --database=$DB -e "
 $SELECT_EE_AIX
-FROM $tCPU cpu, $tDB db
-where cpu.Host_Name=db.Host_Name and db.DB_Edition='Enterprise' and cpu.os like '%AIX%'
+FROM $tCPU cpu left join $tDB db
+on cpu.Host_Name=db.Host_Name 
+where db.DB_Edition='Enterprise' and cpu.os like '%AIX%'
 and db.OLAP_Installed='TRUE' and (db.OLAP_Cubes not in ('','0','-942') or db.Analytic_Workspaces not in ('0','','-942'))
 order by cpu.Machine_Serial_Number, cpu.Marque, cpu.Host_Name, cpu.os;
 "
@@ -342,18 +354,48 @@ order by cpu.Machine_Serial_Number, cpu.Marque, cpu.Host_Name, cpu.os;
 echo "Liste des serveurs avec option SPATIAL/LOCATOR en Enterprise Edition"
 mysql -uroot -proot --local-infile --database=$DB -e "
 $SELECT_EE_NON_AIX
-FROM $tCPU cpu, $tDB db
-where cpu.Host_Name=db.Host_Name and db.DB_Edition='Enterprise' and cpu.os not like '%AIX%'
+FROM $tCPU cpu left join $tDB db
+on cpu.Host_Name=db.Host_Name 
+where db.DB_Edition='Enterprise' and (cpu.os not like '%AIX%' or cpu.os is null)
 and db.v_opt_spatial!=''
-order by cpu.Marque, cpu.Host_Name, cpu.os;
+order by $ORDERBY
 "
+
 
 mysql -uroot -proot --local-infile --database=$DB -e "
 $SELECT_EE_AIX
-FROM $tCPU cpu, $tDB db
-where cpu.Host_Name=db.Host_Name and db.DB_Edition='Enterprise' and cpu.os like '%AIX%'
+FROM $tDB db left join $tCPU cpu on cpu.Host_Name=db.Host_Name 
+where db.DB_Edition='Enterprise' 
+and (cpu.os like '%AIX%' or cpu.os is null) 
 and db.v_opt_spatial!=''
-order by cpu.Machine_Serial_Number, cpu.Marque, cpu.Host_Name, cpu.os;
+order by $ORDERBY
+;
+"
+
+#-------------------------------------------------------------------------------
+# Option Active Data Guard
+#-------------------------------------------------------------------------------
+echo "Liste des serveurs avec option Active Data Guard en Enterprise Edition"
+mysql -uroot -proot --local-infile --database=$DB -e "
+$SELECT_EE_NON_AIX
+FROM $tDbaFeatures db left join $tCPU cpu on cpu.Host_Name=db.Host_Name 
+where 
+-- db.DB_Edition='Enterprise' and 
+(cpu.os not like '%AIX%' or cpu.os is null)
+and db.name like 'Active Data Guard%'
+order by $ORDERBY
+"
+
+
+mysql -uroot -proot --local-infile --database=$DB -e "
+$SELECT_EE_AIX, db.version
+FROM $tDbaFeatures db left join $tCPU cpu on cpu.Host_Name=db.Host_Name 
+where 
+-- db.DB_Edition='Enterprise' and 
+(cpu.os like '%AIX%' or cpu.os is null) 
+and db.name like 'Active Data Guard%'
+order by $ORDERBY
+;
 "
 
 #-------------------------------------------------------------------------------
@@ -362,66 +404,96 @@ order by cpu.Machine_Serial_Number, cpu.Marque, cpu.Host_Name, cpu.os;
 echo "Liste des serveurs qui utilisent TUNING PACK"
 
 mysql -uroot -proot --local-infile --database=$DB -e "
-$SELECT_EE_NON_AIX
+$SELECT_EE_NON_AIX, db.DB_Edition
 FROM $tCPU cpu, $tDB db
 where cpu.Host_Name=db.Host_Name and cpu.os not like '%AIX%'
 -- and db.DB_Edition='Enterprise'
 and db.Tuning_Pack_Used!='0'
-order by cpu.Marque, cpu.os, cpu.Host_Name;
+order by db.db_edition, cpu.physical_server, cpu.host_name;
+-- Marque, cpu.os, cpu.Host_Name;
 "
 
 mysql -uroot -proot --local-infile --database=$DB -e "
-$SELECT_EE_AIX
+$SELECT_EE_AIX, db.DB_Edition
 FROM $tCPU cpu, $tDB db
 where cpu.Host_Name=db.Host_Name and cpu.os like '%AIX%'
 -- and db.DB_Edition='Enterprise'
 and db.Tuning_Pack_Used!='0'
-order by cpu.Machine_Serial_Number, cpu.Marque, cpu.Host_Name, cpu.os;
+order by db.db_edition, cpu.physical_server, cpu.host_name;
+-- order by cpu.Machine_Serial_Number, cpu.Marque, cpu.Host_Name, cpu.os;
 "
-
 #-------------------------------------------------------------------------------
 # Option Diagnostics Pack
 #-------------------------------------------------------------------------------
 echo "Liste des serveurs qui utilisent DIAGNOSTICS PACK"
 mysql -uroot -proot --local-infile --database=$DB -e "
-$SELECT_EE_NON_AIX
+$SELECT_EE_NON_AIX, db.db_edition
 FROM $tCPU cpu, $tDB db
 where cpu.Host_Name=db.Host_Name and cpu.os not like '%AIX%'
 -- and db.DB_Edition='Enterprise'
 -- and db.Tuning_Pack_Used='0' 
 and db.Diag_Pack_Used!='0'
-order by cpu.Marque, cpu.Host_Name, cpu.os;
+-- order by cpu.Marque, cpu.Host_Name, cpu.os;
+order by db.db_edition, cpu.physical_server, cpu.host_name;
 "
 
 mysql -uroot -proot --local-infile --database=$DB -e "
-$SELECT_EE_AIX
+$SELECT_EE_AIX, db.db_edition
 FROM $tCPU cpu, $tDB db
 where cpu.Host_Name=db.Host_Name and cpu.os like '%AIX%'
 -- and db.DB_Edition='Enterprise'
 -- and db.Tuning_Pack_Used='0'
 and db.Diag_Pack_Used!='0'
-order by cpu.Machine_Serial_Number, cpu.Marque, cpu.Host_Name, cpu.os;
+order by db.db_edition, cpu.physical_server, cpu.host_name;
+-- order by cpu.Machine_Serial_Number, cpu.Marque, cpu.Host_Name, cpu.os;
 "
 
 echo "Liste des serveurs qui doivent être licenciés en DIAGNOSTICS PACK car ils utilisent TUNING PACK"
 mysql -uroot -proot --local-infile --database=$DB -e "
-$SELECT_EE_NON_AIX
+$SELECT_EE_NON_AIX, db.db_edition
 FROM $tCPU cpu, $tDB db
 where cpu.Host_Name=db.Host_Name and cpu.os not like '%AIX%'
 -- and db.DB_Edition='Enterprise'
 and db.Tuning_Pack_Used!='0'
 and db.Diag_Pack_Used='0'
-order by cpu.Marque, cpu.os, cpu.Host_Name;
+order by db.db_edition, cpu.physical_server, cpu.host_name;
+-- order by cpu.Marque, cpu.os, cpu.Host_Name;
 "
 
 mysql -uroot -proot --local-infile --database=$DB -e "
-$SELECT_EE_AIX
+$SELECT_EE_AIX, db.db_edition
 FROM $tCPU cpu, $tDB db
 where cpu.Host_Name=db.Host_Name and cpu.os like '%AIX%'
 -- and db.DB_Edition='Enterprise'
 and db.Tuning_Pack_Used!='0'
 and db.Diag_Pack_Used='0'
-order by cpu.Machine_Serial_Number, cpu.Marque, cpu.Host_Name, cpu.os;
+order by db.db_edition, cpu.physical_server, cpu.host_name;
+-- order by cpu.Machine_Serial_Number, cpu.Marque, cpu.Host_Name, cpu.os;
+"
+#-------------------------------------------------------------------------------
+# SQL Profiles
+#-------------------------------------------------------------------------------
+echo "SQL PROFILES : les serveurs qui n utilisent pas Tuning mais seulement SQL Profiles"
+echo "Si des noms de serveurs sont renvoyés, il faut les ajouter dans le calcul des licences Tuning Pack"
+mysql -uroot -proot --local-infile --database=$DB -e "
+select distinct d.host_name 
+from $tDB d, $tSQLP s 
+where 
+  s.instance_name=d.instance_name 
+  and d.Tuning_Pack_Used=0 
+  and s.name is not null order by 1;
+"
+
+echo "SQL PROFILES : les serveurs qui n utilisent NI Tuning NI DIAG, mais seulement SQL Profiles"
+echo "Si des noms de serveurs sont renvoyés, il faut les ajouter dans le calcul des licences Diag ET Tuning Pack"
+mysql -uroot -proot --local-infile --database=$DB -e "
+select distinct d.host_name 
+from $tDB d, $tSQLP s 
+where 
+  s.instance_name=d.instance_name 
+  and d.Tuning_Pack_Used=0 
+  and d.diag_pack_used=0
+  and s.name is not null order by 1;
 "
 #-------------------------------------------------------------------------------
 # FIN

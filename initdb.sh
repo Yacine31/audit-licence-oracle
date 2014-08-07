@@ -42,6 +42,12 @@ function fnAddPrimaryKey {
 
 }
 
+# création de la table sqlprofiles
+TABLE=$1"_sqlprofiles"
+HEADER="instance_name,host_name,database_name,name,created,last_modified,description,type,status"
+fnCreateTable $TABLE $HEADER
+
+
 # création de la table rac
 TABLE=$1"_rac"
 HEADER="host_name,instance_name,database_name,nodes_count,rac_instance,node_name,node_id,instance_status"

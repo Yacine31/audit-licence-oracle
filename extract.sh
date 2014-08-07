@@ -16,7 +16,7 @@
 # répartoir courant pour les différents scripts
 export D_DATE=`date +%Y.%m.%d-%H.%M.%S`
 
-export SCRIPTS_DIR=/home/merlin/lms_scripts
+export SCRIPTS_DIR=/home/oracle/lms_scripts
 
 # nom du projet qui servira de base pour la créations des fichiers de sortie, des tables et du fichier de rapport
 [ "$1" = "" ] && echo "Syntax: $0 PROJECT_NAME" && exit 1

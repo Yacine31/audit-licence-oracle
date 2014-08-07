@@ -12,6 +12,34 @@ HISTORIQUE
 DB="test"
 DELIM=","
 
+function fnSqlProfiles {
+	# recherche dans les fichiers options.csv des lignes qui commencent parGREPME et contiennent SQL_PROFILES
+	# à partir de ces lignes on va extraire seulement certains champs 
+	# exemple des lignes dans le fichier csv
+	# GREPME>>,mrs-db-00026,LARA1PRD,2014-07-25_15:21:48,mrs-db-00026,LARA_PRD,OEM~HEADER,SQL_PROFILES~HEADER,48,count,COUNT,NAME,CREATED,LAST_MODIFIED,DESCRIPTION,TYPE,STATUS,
+	# exemple avec les champs retenus :
+	# LARA1PRD,mrs-db-00026,LARA_PRD,NAME,CREATED,LAST_MODIFIED,DESCRIPTION,TYPE,STATUS,
+	# LARA1PRD,mrs-db-00026,LARA_PRD,"SYS_SQLPROF_g2fmwfghgfcdp","2014-05-13_12:10:33","2014-05-13_12:10:33","Plan fix Plan 1561606260 for SQL ID g2fmwfghgfcdp","MANUAL","ENABLED",
+
+	TABLE=$1"_sqlprofiles"
+	TMPFILE="/tmp/sqlprofiles.csv"
+	
+	# ensuite on parcourt les fichiers XXX_YYY_options.csv pour les insérer dans la table 
+	rm -f $TMPFILE 2>/dev/null
+	echo -n "Insertion des données SQL PROFILES à partir des fichiers XXX_YYY_options.csv dans la table $TABLE : "
+	find -type f -iname "*options.csv" | while read f
+	do 
+		echo -n "."
+		cat $f | grep "^GREPME" | grep ",SQL_PROFILES," | cut -d',' -f3,5,6,12- >> $TMPFILE
+	done
+	echo ""
+
+	mysql -uroot -proot --local-infile --database=$DB -e "
+	load data local infile '$TMPFILE' into table $TABLE fields terminated by '$DELIM';"
+	# rm -f $TMPFILE
+
+}
+
 function fnRAC {
 	# recherche dans les fichiers options.csv des lignes qui contiennent RAC,GV$INSTANCE
 	# à partir de ces lignes on va extraire seulement certains champs pour arriver à cette structure :
@@ -66,7 +94,12 @@ function fnAdminPack {
 	find -type f -iname "*dba_feature.csv" | while read f
 	do 
 		echo -n "."
-		cat $f | grep "^0," | sed 's/"//g' >> $TMPFILE
+		# le champs description contient des , ce qui pose problème lors de l'insertion
+		# car la virgule est aussi le délimiteur de champs
+		# on remplace les "," par ";"
+		# ensuite on remplace les , par des .
+		# et on remet le délimiteur à "," au lieu de ";"
+		cat $f | grep "^0," | sed 's/,"/;"/g' | sed 's/,//g' | sed 's/;"/,"/g' | sed 's/"//g' >> $TMPFILE
 	done
 	echo ""
 
@@ -122,3 +155,4 @@ fnAdminPack $1
 fnVersion $1
 fnOlap $1
 fnRAC $1
+fnSqlProfiles $1

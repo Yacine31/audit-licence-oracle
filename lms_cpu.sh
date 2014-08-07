@@ -367,10 +367,10 @@ function get_virtuel {
 			# pour les serveurs AIX on regarde le type de la partition 
 			#---
 			pType=$(echo $Partition_Type | grep -i "Dedicated")
-			if [[ "$pType" == "" ]]; then
+			# if [[ "$pType" == "" ]]; then
 				VIRTUEL="TRUE"
 				PHYSICAL_SERVER=$Machine_Serial_Number
-			fi
+			# fi
 			;;
 		* )
 			#---
