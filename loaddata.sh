@@ -4,7 +4,7 @@
 
 # MYSQL_ARGS="--defaults-file=/etc/mysql/debian.cnf"
 DB="test"
-DELIM=","
+DELIM=";"
 
 CSV="$1"
 TABLE="$2"

@@ -30,23 +30,25 @@ export CPU_TABLE=${PROJECT_NAME}"_cpu"
 # modification du path
 export PATH=$SCRIPTS_DIR:$PATH
 
+# appeler le script d'initialisation de la base
+$SCRIPTS_DIR/initdb.sh $PROJECT_NAME
+
 # appeler la consolidation des fichiers lms_cpu
 $SCRIPTS_DIR/lms_cpu.sh $CPU_CSV
 
 # intégrer les données à la base mysql
-echo "Création et import des données serveurs dans MySQL ..."
-$SCRIPTS_DIR/mktable.sh $CPU_CSV $CPU_TABLE 2>/dev/null
+echo "import des données serveurs dans MySQL ..."
+$SCRIPTS_DIR/loaddata.sh $CPU_CSV $CPU_TABLE 2>/dev/null
 
 # appeler le script de consolidation des données reviewlite
 $SCRIPTS_DIR/lms_db.sh $DB_CSV 2>/dev/null
 
 # intégrer les données à la base mysql
-echo "Création et import des données database dans MySQL ..."
-$SCRIPTS_DIR/mktable.sh $DB_CSV $DB_TABLE 2>/dev/null
+echo "import des données database dans MySQL ..."
+$SCRIPTS_DIR/loaddata.sh $DB_CSV $DB_TABLE 2>/dev/null
 
 # générer les données sur le partitioning 
 $SCRIPTS_DIR/partitions.sh $PROJECT_NAME
 
 # générer le rapport
-# $SCRIPTS_DIR/reports_1.5.sh $DB_TABLE $CPU_TABLE
 $SCRIPTS_DIR/reports.sh $PROJECT_NAME

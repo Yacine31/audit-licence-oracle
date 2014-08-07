@@ -8,6 +8,10 @@
 # 06/05/2014 - reorganisation du script, les noms des variables, les entetes, ....
 # 19/05/2014 - adaptation du script pour qu'il soit appelé depuis le script parincipal extract.sh
 # 22/05/2014 - extraction de Node Name, Partition Name et Partition Number pour les serveurs AIX
+# 22/07/2014 - ajout du némero de série de la machine AIX : permet de savoir si les LPAR sont sur le même chassis ou pas
+#            - ajout du maximum CPU in system pour les machines AIX : Active Physical CPUs in system
+# 03/08/2014 - ajout de la colonne physical_server : pour AIX=n° de serie, pour les autres cas = nom du serveur sinon VMWARE si VM
+
 
 :<<README
 Postulat de depart :
@@ -25,7 +29,8 @@ OUTPUT_FILE=$1
 
 function print_header {
 	# insertion des entetes dans le fichier de sortie :
-	echo -e "Host Name;\
+	echo -e "Physical Server;\
+	Host Name;\
 	OS;\
 	Marque;\
 	Model;\
@@ -41,10 +46,13 @@ function print_header {
 	Partition Mode;\
 	Entitled Capacity;\
 	Active CPUs in Pool;\
-	Online Virtual CPUs" >> $OUTPUT_FILE
+	Online Virtual CPUs;\
+	Machine Serial Number;\
+	Active Physical CPUs" >> $OUTPUT_FILE
 }
 
 function init_variables {
+	PHYSICAL_SERVER=""
 	HNAME=""
 	OS=""
 	RELEASE=""
@@ -63,7 +71,10 @@ function init_variables {
 	Entitled_Capacity=""
 	Active_CPUs_in_Pool=""
 	Online_Virtual_CPUs=""
+	Machine_Serial_Number=""
+	Active_Physical_CPUs=""
 }
+
 
 function get_hostname {
 	HNAME=`cat $1 | grep '^Machine Name' | sort | uniq | cut -d'=' -f2 | sed 's/\\r//'`
@@ -90,6 +101,10 @@ function get_os {
 	if [ ! "$OS" ]; then
 		OS=`cat $1 | grep "^Operating System" -A1 | grep "Caption: " | tr -s ' ' | sed 's/ Caption: //' | sed 's/\\r//'`
 	fi
+	
+	# quelque soit l'OS on prend juste le premier mot (Microsoft souvent suivi de plusieurs informations
+	OS=$(echo $OS | cut -d' ' -f1)
+
 }
 
 function get_marque {
@@ -179,7 +194,7 @@ function get_sockets_number {
 	#---
 	# Si serveur virtuel, pas de calcul
 	#---
-	if [ "$VIRTUEL" == "Oui" ] 
+	if [ "$VIRTUEL" == "TRUE" ] 
 	then 
 		NB_SOCKETS="ND VIRTUEL"
 		return
@@ -187,7 +202,7 @@ function get_sockets_number {
 
 	case $OS in 
 		*Windows* )
-	                NB_SOCKETS=`cat $f | grep -i '^System$' -A3 | grep -i 'NumberOfProcessors:' | sed 's/  NumberOfProcessors: //'`
+	        NB_SOCKETS=`cat $f | grep -i 'NumberOfProcessors:' | tail -1 | cut -d: -f2 | tr -d ' '`
 		;;
 
 		HP-UX )
@@ -196,7 +211,8 @@ function get_sockets_number {
 				# si ia64 on applique cette formule :
 				v_ia64=`echo $MODEL | grep 'ia64'`
 				if [ "$v_ia64" ]; then 
-					NB_SOCKETS=`cat $f | grep '^CPU info:' -A1 | tail -1 | tr -s ' ' | cut -d' ' -f2`
+					NB_SOCKETS=`cat $f | grep '^CPU info:' -A1 | tail -1 | tr -s ' '`
+					NB_SOCKETS=${NB_SOCKETS:1:1}
 				else
 					NB_SOCKETS=`cat $f |  grep '^processor' | wc -l`
 				fi
@@ -211,7 +227,7 @@ function get_sockets_number {
 		AIX )
 			# nombre de processeurs et coeurs pour AIX
 			if [ "$OS" == "AIX" ]; then
-				NB_SOCKETS=`cat $f | egrep -i '^Number Of Processors:|^Nombre de processeurs' | tail -1 | cut -d':' -f2`
+				NB_SOCKETS=`cat $f | egrep -i '^Number Of Processors:|^Nombre de processeurs' | tail -1 | cut -d':' -f2 | tr -d ' '`
 			fi
 		;;
 
@@ -242,7 +258,7 @@ function get_core_number {
 	#---
 	# Si serveur virtuel, pas de calcul
 	#---
-	if [ "$VIRTUEL" == "Oui" ] 
+	if [ "$VIRTUEL" == "TRUE" ] 
 	then 
 		NB_COEURS="ND VIRTUEL"
 		return
@@ -250,7 +266,7 @@ function get_core_number {
 
 	case $OS in 
 		*Windows* )
-	                NB_COEURS=`cat $f | grep -i '^  CPU NumberOfCores:' | sed 's/  CPU NumberOfCores: //'`
+	        NB_COEURS=`cat $f | grep -i 'CPU NumberOfCores:' | tail -1 | cut -d: -f2 | tr -d ' '`
 			NB_COEURS=${NB_COEURS:0:2}
 			# cette chaine retourne le nombre de coeurs ou "PA" pour PATCH NOT AVAILABLE
 			if [ $NB_COEURS == "PA" ]; then NB_COEURS="ND PATCH ERROR"; fi
@@ -297,16 +313,29 @@ function get_aix_params {
 		Partition_Number=`cat $f | grep /usr/bin/lparstat -A3 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
 		Partition_Type=`cat $f | grep /usr/bin/lparstat -A4 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
 		Partition_Mode=`cat $f | grep /usr/bin/lparstat -A5 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
+		# Entitled_Capacity=`cat $f | grep /usr/bin/lparstat -A6 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'| sed 's/\./,/g'`
 		Entitled_Capacity=`cat $f | grep /usr/bin/lparstat -A6 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
 		Active_CPUs_in_Pool=`cat $f | grep /usr/bin/lparstat -A21 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
 		Online_Virtual_CPUs=`cat $f | grep /usr/bin/lparstat -A9 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
+		Machine_Serial_Number=`cat $f | grep /usr/sbin/prtconf -A2 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
+		# pour certains serveur Lorsque Serial Number retourne "Not Available", il manque un retour chariot
+		# la ligne suivante est collée au résulat ce qui donne : Not AvailableProcessor Type
+		# On remplace donc "Not Available" et "Not AvailableProcessor Type" par "NA"
+		Serial=${Machine_Serial_Number:0:3}
+		if [ "$Serial" == "Not" ]; then Machine_Serial_Number="NA"; fi
+
+		Active_Physical_CPUs=`cat $f | grep /usr/bin/lparstat -A20 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
+
+		if [ $(echo $Partition_Type | grep -i "Dedicated|Donat") ]; then VIRTUEL="FALSE"; else VIRTUEL="TRUE"; fi
 	fi
 }
 
 function print_data {
    # ajout d'une ligne dans le fichier OUTPUT_FILE
-	echo -e "$HNAME;\
-	$OS $RELEASE;\
+	## $OS  => cette ligne est remplacé par $OS seulement au lieu de $OS $RELEASE;\
+	echo -e "$PHYSICAL_SERVER;\
+	$HNAME;\
+	$OS;\
 	$MARQUE;\
 	$MODEL;\
 	$VIRTUEL;\
@@ -321,17 +350,39 @@ function print_data {
 	$Partition_Mode;\
 	$Entitled_Capacity;\
 	$Active_CPUs_in_Pool;\
-	$Online_Virtual_CPUs" >> $OUTPUT_FILE
+	$Online_Virtual_CPUs;\
+	$Machine_Serial_Number;\
+	$Active_Physical_CPUs" >> $OUTPUT_FILE
 }
 
 function get_virtuel {
+	# initialisation : par defaut le serveur n'est pas virtuel et le serveur physique = host_name
+	VIRTUEL="FALSE"
+	PHYSICAL_SERVER=$HNAME
 
-	#---
-	# pour la virtualisation VMware, on regarde la marque 
-	#---
-	v_VMWARE=`echo $MARQUE | grep -i vmware`
-	VIRTUEL=Non
-	if [ "$v_VMWARE" ]; then VIRTUEL=Oui; fi
+	# ensuite on regarde le cas de certains OS
+	case $OS in
+		AIX* )
+			#---
+			# pour les serveurs AIX on regarde le type de la partition 
+			#---
+			pType=$(echo $Partition_Type | grep -i "Dedicated")
+			if [[ "$pType" == "" ]]; then
+				VIRTUEL="TRUE"
+				PHYSICAL_SERVER=$Machine_Serial_Number
+			fi
+			;;
+		* )
+			#---
+			# pour la virtualisation VMware, on regarde la marque 
+			#---
+			v_VMWARE=$(echo $MARQUE | grep -i vmware)
+			if [[ "$v_VMWARE" != "" ]]; then
+				VIRTUEL="TRUE"
+				PHYSICAL_SERVER="VMWARE"
+			fi
+			;;
+	esac
 }
 
 echo "Debut du traitement : fichier de sortie $OUTPUT_FILE"
@@ -353,12 +404,15 @@ do
 	get_hostname $f
 	get_os $f
 	get_marque $f
-	get_modele $f
 	get_virtuel $f
+	get_modele $f
 	get_processor_type $f
 	get_sockets_number $f
 	get_core_number $f
 	get_aix_params $f
+	# le paramètre virtuel est calculé en dernier car il se base sur plusieurs paramètres
+	# qui sont calculés avant : OS, PARAMS AIX, MARQUE
+	get_virtuel $f
 	print_data 
 done
 # mise en forme du fichier de sortie

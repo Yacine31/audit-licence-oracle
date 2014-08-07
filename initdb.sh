@@ -22,52 +22,100 @@ function fnCreateTable {
 	# à partir de la variable HEADER on créé la table 
 	FIELDS=$(echo $HEADER | sed -e 's/'$DELIM'/` varchar(255),\n`/g' -e 's/\r//g')
 	FIELDS='`'"$FIELDS"'` varchar(255)'
-	echo -n "Création de la table " $TABLE " .... "
+	echo -n "Création de la table $TABLE .... "
 	mysql -uroot -proot --local-infile --database=$DB -e "
 	DROP TABLE IF EXISTS $TABLE;
 	CREATE TABLE $TABLE ($FIELDS);"
 	echo " terminée"
 }
 
+function fnAddPrimaryKey {
+	# ajout d'une clé primaire sur une table
+	TABLE=$1
+	KEY=$2
+	
+	# TODO : ajouter la vérification des paramètres 
+	echo -n "Ajout de la clé primaire ($KEY) à la table $TABLE ... "
+	mysql -uroot -proot --local-infile --database=$DB -e "
+	ALTER TABLE $TABLE ADD PRIMARY KEY ($KEY);"
+	echo " terminé"
+
+}
+
+# création de la table rac
+TABLE=$1"_rac"
+HEADER="host_name,instance_name,database_name,nodes_count,rac_instance,node_name,node_id,instance_status"
+fnCreateTable $TABLE $HEADER
+
 # création de la table dba_feature
+TABLE=$1"_dba_feature"
 HEADER="AUDIT_ID,DBID,NAME,VERSION,DETECTED_USAGES,TOTAL_SAMPLES,CURRENTLY_USED,"
 HEADER=$HEADER"FIRST_USAGE_DATE,LAST_USAGE_DATE,AUX_COUNT,FEATURE_INFO,LAST_SAMPLE_DATE,"
 HEADER=$HEADER"LAST_SAMPLE_PERIOD,SAMPLE_INTERVAL,DESCRIPTION,HOST_NAME,INSTANCE_NAME,SYSDATE"
-fnCreateTable $1"_dba_feature" $HEADER
+fnCreateTable $TABLE $HEADER
 
 # création de la table segments
+TABLE=$1"_segments"
 HEADER="AUDIT_ID,OWNER,SEGMENT_TYPE,SEGMENT_NAME,PARTITION_COUNT,PARTITION_MIN,PARTITION_MAX,HOST_NAME,INSTANCE_NAME,SYSDATE"
-fnCreateTable $1"_segments" $HEADER
+fnCreateTable $TABLE $HEADER
 
 # création de la table version
+TABLE=$1"_version"
 HEADER="AUDIT_ID,BANNER,HOST_NAME,INSTANCE_NAME,SYSDATE"
-fnCreateTable $1"_version" $HEADER
+fnCreateTable $TABLE $HEADER
+
+# ajout de la clé sur la table version : host + instance
+KEY=HOST_NAME,INSTANCE_NAME
+fnAddPrimaryKey $TABLE $KEY
 
 # creation de la table dba_feature_usage (plus complète que dba_feature)
+TABLE=$1"_dba_usage"
 HEADER="HOST_NAME,INSTANCE_NAME,DBA_FEATURE_USAGE_STATISTICS,COUNT,NAME,VERSION,DETECTED_USAGES,TOTAL_SAMPLES,CURRENTLY_USED,FIRST_USAGE_DATE,LAST_USAGE_DATE,LAST_SAMPLE_DATE,SAMPLE_INTERVAL"
-fnCreateTable $1"_dba_usage" $HEADER
+fnCreateTable $TABLE $HEADER
 
 # creation de la table pour les données OLAP
 
 # création de la table pour les données DB collectées par le script extract.sh
+TABLE=$1"_db"
 HEADER="HOST_NAME,INSTANCE_NAME,DB_VERSION_MAJ,PLATFORM_NAME,DB_EDITION,DB_CREATED_DATE,"
 HEADER=$HEADER"DIAG_PACK_USED,TUNING_PACK_USED,V_OPT_RAC,V_OPT_PART,OLAP_INSTALLED,OLAP_CUBES,ANALYTIC_WORKSPACES,"
 HEADER=$HEADER"V_OPT_DM,V_OPT_SPATIAL,V_OPT_ACDG,V_OPT_ADVSEC,V_OPT_LBLSEC,V_OPT_DBV,USERS_CREATED,SESSIONS_HW"
-fnCreateTable $1"_db" $HEADER
+fnCreateTable $TABLE $HEADER
 
 # ajout de la clé primaire sur cette table HOST_NAME+INSTANCE_NAME
-mysql -uroot -proot --local-infile --database=$DB -e "
-ALTER TABLE ${1}_db ADD PRIMARY KEY (Host_Name, Instance_Name);"
-echo "Création de la clé primaire ... OK"
+KEY=HOST_NAME,INSTANCE_NAME
+fnAddPrimaryKey $TABLE $KEY
+
+#mysql -uroot -proot --local-infile --database=$DB -e "
+#ALTER TABLE ${1}_db ADD PRIMARY KEY (Host_Name, Instance_Name);"
+#echo "Création de la clé primaire ... OK"
 
 # creation de la table pour les données serveurs
-HEADER="HOST_NAME,OS_RELEASE,MARQUE,MODEL,VIRTUEL,TYPE_PROC,NB_SOCKETS,NB_COEURS,NB_COEURS_TOTAL,"
-HEADER=$HEADER"Node_Name,Partition_Name,Partition_Number,Partition_Type,Partition_Mode,"
-HEADER=$HEADER"Entitled_Capacity,Active_CPUs_in_Pool,Online_Virtual_CPUs"
-fnCreateTable $1"_cpu" $HEADER
+TABLE=$1"_cpu"
+HEADER="PHYSICAL_SERVER,Host_Name,OS,Marque,Model,Virtuel,Processor_Type,Socket,Cores_per_Socket,Total_Cores,"
+HEADER=$HEADER"Node_Name,Partition_Name,Partition_Number,Partition_Type,Partition_Mode,Entitled_Capacity,Active_CPUs_in_Pool,Online_Virtual_CPUs,Machine_Serial_Number,Active_Physical_CPUs"
+fnCreateTable $TABLE $HEADER
 
 # ajout de la clé primaire sur cette table HOST_NAME
-mysql -uroot -proot --local-infile --database=$DB -e "
-ALTER TABLE ${1}_cpu ADD PRIMARY KEY (Host_Name);"
-echo "Création de la clé primaire ... OK"
+KEY=Host_Name
+fnAddPrimaryKey $TABLE $KEY
+
+#mysql -uroot -proot --local-infile --database=$DB -e "
+#ALTER TABLE ${1}_cpu ADD PRIMARY KEY (Host_Name);"
+#echo "Création de la clé primaire ... OK"
+
+# creation de la table pour les serveurs physiques
+TABLE=$1"_pservers"
+HEADER="Physical_Server,Socket,Cores_per_Socket"
+fnCreateTable $TABLE $HEADER
+
+# ajout de la clé primaire
+KEY=Physical_Server
+fnAddPrimaryKey $TABLE $KEY
+
+
+# creation de la table pour les données OLAP
+TABLE=$1"_olap"
+HEADER="GREPME,Host_Name,Instance_Name,Sysdate,Host_name_2,Instance_Name_2,Olap_Header,ANALYTIC_WORKSPACES_HEADER,Count_Nbr,Count_Txt,OWNER,AW_NUMBER,AW_NAME,PAGESPACES,GENERATIONS"
+fnCreateTable $TABLE $HEADER
 
