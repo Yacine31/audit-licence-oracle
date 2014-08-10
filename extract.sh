@@ -16,7 +16,7 @@
 # répartoir courant pour les différents scripts
 export D_DATE=`date +%Y.%m.%d-%H.%M.%S`
 
-export SCRIPTS_DIR=/home/oracle/lms_scripts
+export SCRIPTS_DIR=$HOME/lms_scripts
 
 # nom du projet qui servira de base pour la créations des fichiers de sortie, des tables et du fichier de rapport
 [ "$1" = "" ] && echo "Syntax: $0 PROJECT_NAME" && exit 1
@@ -51,4 +51,4 @@ $SCRIPTS_DIR/loaddata.sh $DB_CSV $DB_TABLE 2>/dev/null
 $SCRIPTS_DIR/partitions.sh $PROJECT_NAME
 
 # générer le rapport
-$SCRIPTS_DIR/reports.sh $PROJECT_NAME
+$SCRIPTS_DIR/reports2xml.sh $PROJECT_NAME
