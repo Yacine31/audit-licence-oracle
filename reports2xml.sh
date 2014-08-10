@@ -27,6 +27,9 @@ tCPUNONAIX=$PROJECT_NAME"_cpu_non_aix"	  # table pour le calcul des CPUs Oracle 
 tRAC=$PROJECT_NAME"_rac"	# table avec les données RAC : nodes_count != 1
 tSQLP=$PROJECT_NAME"_sqlprofiles"	# table avec les données SQL PROFILES
 
+export DATE_JOUR=`date +%Y%m%d-%H%M%S`
+export TMP_FILE=${PROJECT_NAME}.tmp
+export XML_FILE=${PROJECT_NAME}_${DATE_JOUR}.xml
 
 #-----------------------------------
 # les fonction suivantes permettent d'écrire le fichier XML
@@ -48,7 +51,32 @@ echo "
  </DocumentProperties>
  <OfficeDocumentSettings xmlns=\"urn:schemas-microsoft-com:office:office\">
   <AllowPNG/>
- </OfficeDocumentSettings>" >> $XML_FILE
+ </OfficeDocumentSettings>
+ <Styles>
+  <Style ss:ID=\"Default\" ss:Name=\"Normal\">
+   <Alignment ss:Vertical=\"Bottom\"/>
+   <Font ss:FontName=\"Calibri\" x:Family=\"Swiss\" ss:Size=\"10\" ss:Color=\"#000000\"/>
+  </Style>
+ <Style ss:ID=\"TableauTexte\">
+   <Borders>
+    <Border ss:Position=\"Bottom\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>
+    <Border ss:Position=\"Left\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>
+    <Border ss:Position=\"Right\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>
+    <Border ss:Position=\"Top\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>
+   </Borders>
+  </Style>
+  <Style ss:ID=\"TableauEntete\">
+   <Alignment ss:Horizontal=\"Center\" ss:Vertical=\"Bottom\"/>
+   <Borders>
+    <Border ss:Position=\"Bottom\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>
+    <Border ss:Position=\"Left\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>
+    <Border ss:Position=\"Right\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>
+    <Border ss:Position=\"Top\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\"/>
+   </Borders>
+   <Font ss:FontName=\"Calibri\" x:Family=\"Swiss\" ss:Size=\"11\" ss:Color=\"#000000\" ss:Bold=\"1\"/>
+   <Interior ss:Color=\"#92D050\" ss:Pattern=\"Solid\"/>
+  </Style>
+  </Styles>" >> $XML_FILE
 }
 
 # dernière balise : fin du fichier xml
@@ -76,7 +104,7 @@ echo " <Worksheet ss:Name=\"$SHEET_NAME\">
 echo "<Row>"    >> $XML_FILE
 head -1 $TMP_FILE | tr '|' '\n' | while read c
 do
-        echo "<Cell><Data ss:Type=\"String\">$c</Data></Cell>"  >> $XML_FILE
+        echo "<Cell ss:StyleID=\"TableauEntete\"><Data ss:Type=\"String\">$c</Data></Cell>"  >> $XML_FILE
 done
 
 # fin du header
@@ -89,7 +117,7 @@ do
         # pour chaque ligne on va lire les champs et les insérer
         echo $line | tr '|' '\n' | while read c
         do
-                echo "<Cell><Data ss:Type=\"String\">$c</Data></Cell>"   >> $XML_FILE
+                echo "<Cell ss:StyleID=\"TableauTexte\"><Data ss:Type=\"String\">$c</Data></Cell>"   >> $XML_FILE
         done
         echo "</Row>"   >> $XML_FILE
 done
@@ -104,8 +132,8 @@ echo "</Table>
 
 function export_to_xml {
 # export du résulat pour Excel
-export TMP_FILE=${PROJECT_NAME}.tmp
-export XML_FILE=${PROJECT_NAME}.xml
+#export TMP_FILE=${PROJECT_NAME}.tmp
+#export XML_FILE=${PROJECT_NAME}.xml
 rm -f $TMP_FILE 2>/dev/null
 
 mysql -uroot -proot --local-infile --database=$DB -e "$SQL" >> $TMP_FILE
@@ -320,9 +348,9 @@ where $WHERE order by $ORDERBY
 mysql -uroot -proot --local-infile --database=$DB -e "$SQL"
 
 # export du résulat pour Excel
-export TMP_FILE=${PROJECT_NAME}.tmp
-export XML_FILE=${PROJECT_NAME}.xml
-rm -f $TMP_FILE $XML_FILE 2>/dev/null
+#export TMP_FILE=${PROJECT_NAME}.tmp
+#export XML_FILE=${PROJECT_NAME}.xml
+#rm -f $TMP_FILE $XML_FILE 2>/dev/null
 
 # insertion du header du fichier xml :
 print_xml_header $XML_FILE
@@ -649,14 +677,13 @@ and d.name like 'Active Data Guard%'
 order by $ORDERBY
 ;
 "
-
 mysql -uroot -proot --local-infile --database=$DB -e "$SQL"
 # insertion des données de la requête dans le fichier XML
 export SHEET_NAME=ActiveDG
 export_to_xml
 
 export SQL="$SELECT_EE_AIX, d.version
-FROM $tDbaFeatures db left join $tCPU c on c.Host_Name=d.Host_Name 
+FROM $tDbaFeatures d left join $tCPU c on c.Host_Name=d.Host_Name 
 where 
 -- d.DB_Edition='Enterprise' and 
 (c.os like '%AIX%' or c.os is null) 
@@ -731,7 +758,8 @@ export DIAG_PACK_FEATURES=$DIAG_PACK_FEATURES",'EM Performance Page'"
 
 export FROM="$tCPU c, $tDB d"
 export WHERE="c.Host_Name=d.Host_Name and c.os not like '%AIX%' and d.Diag_Pack_Used!='0'"
-export ORDERBY="d.db_edition, c.physical_server, c.host_name"
+# export ORDERBY="d.db_edition, c.physical_server, c.host_name"
+export ORDERBY="c.physical_server, c.host_name"
 
 export SQL="$SELECT_EE_NON_AIX, d.db_edition
 FROM $FROM
@@ -802,13 +830,13 @@ echo "--------------------------------------------------------------------------
 echo " Les serveurs qui utilisent des fonctionnalités du pack Oracle Advanced Security :"
 echo ""
 
-export ADVANCED_SEC_FEATURES='Transparent Data Encryption%'
+export ADVANCED_SEC_FEATURES="'Transparent Data Encryption%'"
 
 export FROM="$tDbaFeatures d left join $tCPU c on d.HOST_NAME=c.Host_Name"
 export WHERE="name in ($ADVANCED_SEC_FEATURES)"
 # export ORDERBY="c.physical_server, c.host_name"
 
-export SQL="$SELECT_EE_NON_AIX, d.db_edition
+export SQL="$SELECT_EE_NON_AIX
 FROM $FROM
 where $WHERE
 order by $ORDERBY
@@ -819,10 +847,23 @@ mysql -uroot -proot --local-infile --database=$DB -e "$SQL"
 export SHEET_NAME=AdvancedSec
 export_to_xml
 
+# SErveurs AIX
+export SQL="$SELECT_EE_AIX
+FROM $FROM
+where $WHERE
+order by $ORDERBY
+;
+"
+mysql -uroot -proot --local-infile --database=$DB -e "$SQL"
+# insertion des données de la requête dans le fichier XML
+export SHEET_NAME=AdvancedSecAix
+export_to_xml
+
 # Option Diagnostics Pack : calcul des processeurs
 # print_proc_oracle_aix $WHERE
 export FROM="$tDbaFeatures d left join $tCPU c on d.HOST_NAME=c.Host_Name"
 export WHERE="name in ($ADVANCED_SEC_FEATURES)"
+
 
 print_proc_oracle_aix $FROM'|'$WHERE
 
