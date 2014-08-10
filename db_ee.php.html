@@ -1,0 +1,32 @@
+<?php
+
+include('connection.php'); 
+$db = mysql_connect('localhost', 'root', 'root');
+
+mysql_select_db($database, $db);
+
+$sql="select * from cma_version v left join cma_cpu c on v.host_name=c.host_name ";
+$sql.="where v.banner not like '%Enterprise%' and v.banner not like '%Personal%' and v.banner not like '%Express%' ";
+$sql.="order by physical_server, v.host_name, v.instance_name";
+
+$rs = mysql_query($sql) or die('Erreur SQL '.$sql. ' ' .mysql_error());
+
+$total_rows=mysql_num_rows($rs);
+
+$nb_bases_se=0;
+
+if ($total_rows > 0) {
+	while ($data = mysql_fetch_assoc($rs))
+   	{ 
+   		echo "physical_server=".$data['PHYSICAL_SERVER']."\t";
+   		echo "host_name=".$data['v.Host_Name']."\t";
+   		echo "socket=".$data['Socket']."\t";
+   	} 
+}
+else
+	echo "Aucune information à afficher \n\r";
+
+// on ferme la connexion à mysql 
+mysql_close(); 
+
+?>
