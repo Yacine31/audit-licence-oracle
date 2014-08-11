@@ -27,9 +27,7 @@ tCPUNONAIX=$PROJECT_NAME"_cpu_non_aix"	  # table pour le calcul des CPUs Oracle 
 tRAC=$PROJECT_NAME"_rac"	# table avec les données RAC : nodes_count != 1
 tSQLP=$PROJECT_NAME"_sqlprofiles"	# table avec les données SQL PROFILES
 
-export DATE_JOUR=`date +%Y%m%d-%H%M%S`
-export TMP_FILE=${PROJECT_NAME}.tmp
-export XML_FILE=${PROJECT_NAME}_${DATE_JOUR}.xml
+
 
 #-----------------------------------
 # les fonction suivantes permettent d'écrire le fichier XML
@@ -117,7 +115,15 @@ do
         # pour chaque ligne on va lire les champs et les insérer
         echo $line | tr '|' '\n' | while read c
         do
-                echo "<Cell ss:StyleID=\"TableauTexte\"><Data ss:Type=\"String\">$c</Data></Cell>"   >> $XML_FILE
+		# TODO : ajouter un test pour définir le format String ou Number
+		pattern='^[0-9]+([.][0-9]+)?$'         # le pattern recherche des nombres sous la forme 12.3445
+		if ! [[ $c =~ $pattern ]] ; then
+			# $c n'est pas un nombre => Type=String
+                	echo "<Cell ss:StyleID=\"TableauTexte\"><Data ss:Type=\"String\">$c</Data></Cell>"   >> $XML_FILE
+		else
+   			# $c est un nombre => Type=Number
+                	echo "<Cell ss:StyleID=\"TableauTexte\"><Data ss:Type=\"Number\">$c</Data></Cell>"   >> $XML_FILE
+		fi
         done
         echo "</Row>"   >> $XML_FILE
 done
@@ -132,14 +138,15 @@ echo "</Table>
 
 function export_to_xml {
 # export du résulat pour Excel
-#export TMP_FILE=${PROJECT_NAME}.tmp
-#export XML_FILE=${PROJECT_NAME}.xml
-rm -f $TMP_FILE 2>/dev/null
 
-mysql -uroot -proot --local-infile --database=$DB -e "$SQL" >> $TMP_FILE
+mysql -uroot -proot --local-infile --database=$DB -e "$SQL" > $TMP_FILE
 
-# insertion des données de la requête dans le fichier XML
-print_xml_sheet $SHEET_NAME $TMP_FILE $XML_FILE
+# si fichier TMP_FILE pas vide, donc il y a des résultats retourné par la requête SQL
+if [ -s $TMP_FILE ]
+then
+	# insertion des données de la requête dans le fichier XML
+	print_xml_sheet $SHEET_NAME $TMP_FILE $XML_FILE
+fi
 
 }
 
@@ -156,45 +163,24 @@ export WHERE=$(echo $@ | cut -d'|' -f2)
 
 echo "Calcul des processeurs Oracle par serveur physique :"
 
-mysql -uroot -proot --local-infile --database=$DB -e "
-drop table if exists $tCPUAIX;
-create table $tCPUNONAIX as
-
-select distinct physical_server,Processor_Type,Socket,Cores_per_Socket,
-	case Cores_per_Socket
-		when 1 then @Core_Factor := 1
-        end
-	as Core_Factor,
-	case left(reverse(Processor_Type),1)
-        	when 5 then @Core_Factor := 0.75
-	        when 6 then @Core_Factor := 1
-        	when 7 then @Core_Factor := 1
-	end 
-	as Core_Factor,
-	CEILING(@Core_Count * @Core_Factor) as CPU_Oracle
--- from $tDbaFeatures d left join $tCPU c on d.HOST_NAME=c.Host_Name
+export SQL="select distinct physical_server,Processor_Type,Socket,Cores_per_Socket, '' as 'Total Cores', '' as 'Core Factor', '' as 'Proc Oracle'
 from $FROM
-where $WHERE;
---
--- Ensuite on calcul le nombre de processeurs Oracle par Serveur Physique
---
-drop table if exists cpu_oracle;
-create table cpu_oracle as 
-select
-        physical_server,
-        sum(CPU_Oracle) 'Total_Proc',
-	Core_Factor,
-        Active_Physical_CPUs,
-        if (sum(CPU_Oracle)<Active_Physical_CPUs,sum(CPU_Oracle),Active_Physical_CPUs) 'Proc_Oracle_Calcules'
-from $tCPUAIX
-group by physical_server;
+where $WHERE
+group by PHYSICAL_SERVER
+order by c.physical_server;"
 
-select * from cpu_oracle;
-"
+mysql -uroot -proot --local-infile --database=$DB -e "$SQL" 
 
-mysql -ss -uroot -proot --local-infile --database=$DB -e "
-select concat('Total des processeurs Oracle : ', sum(Proc_Oracle_Calcules)) from cpu_oracle;
-"
+# mysql -uroot -proot --local-infile --database=$DB -e "$SQL" > $TMP_FILE 
+
+# insertion des données de la requête dans le fichier XML
+# fonction : "Nom de la feuille (sans espace)" "fichier CSV" "fichier XML"
+export_to_xml
+
+# mysql -ss -uroot -proot --local-infile --database=$DB -e "
+# select concat('Total des processeurs Oracle : ', sum(Proc_Oracle_Calcules)) from cpu_oracle;
+# "
+
 }
 #-----------------------------------
 # Cette fonction est spécifique au serveurs AIx,
@@ -209,44 +195,41 @@ export WHERE=$(echo $@ | cut -d'|' -f2)
 
 echo "Calcul des processeurs Oracle par serveur physique :"
 
-mysql -uroot -proot --local-infile --database=$DB -e "
-drop table if exists $tCPUAIX;
-create table $tCPUAIX as
-
-select distinct physical_server, Partition_Mode,
+export SQL="select
+        r.physical_server,
+        sum(r.CPU_Oracle) 'Total_Proc',
+        r.Core_Factor,
+        r.Active_Physical_CPUs,
+        if (sum(r.CPU_Oracle)<r.Active_Physical_CPUs,sum(r.CPU_Oracle),r.Active_Physical_CPUs) 'Proc_Oracle_Calcules'
+from
+(select distinct physical_server, d.host_name, Partition_Mode,
 Partition_Type, Active_Physical_CPUs, Entitled_Capacity, Active_CPUs_in_Pool, Online_Virtual_CPUs, Processor_Type,
-	case Partition_Mode
-		when 'Uncapped' then @Core_Count := least(cast(Active_CPUs_in_Pool as signed), cast(Online_Virtual_CPUs as signed))
-		when 'Capped' then @Core_Count := cast(Entitled_Capacity as decimal(3,1))
-		when 'Donating' then @Core_Count := cast(Entitled_Capacity as decimal(3,1))
+        case Partition_Mode
+                when 'Uncapped' then @Core_Count := least(cast(Active_CPUs_in_Pool as signed), cast(Online_Virtual_CPUs as signed))
+                when 'Capped' then @Core_Count := cast(Entitled_Capacity as decimal(3,1))
+                when 'Donating' then @Core_Count := cast(Entitled_Capacity as decimal(3,1))
         end
-	as Core_Count,
-	case left(reverse(Processor_Type),1)
-        	when 5 then @Core_Factor := 0.75
-	        when 6 then @Core_Factor := 1
-        	when 7 then @Core_Factor := 1
-	end 
-	as Core_Factor,
-	CEILING(@Core_Count * @Core_Factor) as CPU_Oracle
--- from $tDbaFeatures d left join $tCPU c on d.HOST_NAME=c.Host_Name
-from $FROM
-where $WHERE;
---
--- Ensuite on calcul le nombre de processeurs Oracle par Serveur Physique
---
-drop table if exists cpu_oracle;
-create table cpu_oracle as 
-select
-        physical_server,
-        sum(CPU_Oracle) 'Total_Proc',
-	Core_Factor,
-        Active_Physical_CPUs,
-        if (sum(CPU_Oracle)<Active_Physical_CPUs,sum(CPU_Oracle),Active_Physical_CPUs) 'Proc_Oracle_Calcules'
-from $tCPUAIX
-group by physical_server;
+        as Core_Count,
+        case left(reverse(Processor_Type),1)
+                when 5 then @Core_Factor := 0.75
+                when 6 then @Core_Factor := 1
+                when 7 then @Core_Factor := 1
+        end
+        as Core_Factor,
+        CEILING(@Core_Count * @Core_Factor) as CPU_Oracle
+-- from $tDB d left join $tCPU c on d.HOST_NAME=c.Host_Name
+-- where d.DB_Edition='Enterprise' and c.os like '%AIX%'
+from $FROM where $WHERE
+order by PHYSICAL_SERVER) r
+group by physical_server;"
 
-select * from cpu_oracle;
-"
+mysql -uroot -proot --local-infile --database=$DB -e "$SQL" 
+mysql -uroot -proot --local-infile --database=$DB -e "$SQL" > $TMP_FILE
+
+# insertion des données de la requête dans le fichier XML
+# fonction : "Nom de la feuille (sans espace)" "fichier CSV" "fichier XML"
+export_to_xml
+
 
 mysql -ss -uroot -proot --local-infile --database=$DB -e "
 select concat('Total des processeurs Oracle : ', sum(Proc_Oracle_Calcules)) from cpu_oracle;
@@ -257,7 +240,7 @@ select concat('Total des processeurs Oracle : ', sum(Proc_Oracle_Calcules)) from
 # les clauses SQL communes à certaines requêtes :
 export ORDERBY="c.physical_server, d.host_name"
 
-export SELECT_EE_AIX="SELECT distinct
+export xxxxSELECT_EE_AIX="SELECT distinct
 c.physical_server 'Physical Server',
 -- c.Host_Name Host,
 d.Host_Name Host,
@@ -271,6 +254,32 @@ c.Entitled_Capacity 'EC',
 c.Active_CPUs_in_Pool 'Act CPU',
 c.Online_Virtual_CPUs 'OV CPU',
 c.Active_Physical_CPUs 'Act Phy CPU'
+"
+export SELECT_EE_AIX="distinct c.physical_server,
+d.Host_Name Host,
+c.Model,
+c.OS,
+c.Processor_Type ,
+c.Partition_Number,
+c.Partition_Type,
+c.Partition_Mode,
+c.Entitled_Capacity,
+c.Active_CPUs_in_Pool,
+c.Online_Virtual_CPUs,
+c.Active_Physical_CPUs,
+        case Partition_Mode
+                when 'Uncapped' then @Core_Count := least(cast(Active_CPUs_in_Pool as signed), cast(Online_Virtual_CPUs as signed))
+                when 'Capped' then @Core_Count := cast(Entitled_Capacity as decimal(3,1))
+                when 'Donating' then @Core_Count := cast(Entitled_Capacity as decimal(3,1))
+        end
+        as Core_Count,
+        case left(reverse(Processor_Type),1)
+                when 5 then @Core_Factor := 0.75
+                when 6 then @Core_Factor := 1
+                when 7 then @Core_Factor := 1
+        end
+        as Core_Factor,
+        CEILING(@Core_Count * @Core_Factor) as CPU_Oracle
 "
 
 export SELECT_EE_NON_AIX="
@@ -294,6 +303,16 @@ echo '  Act Phy CPU = Active Physical CPUs in system'
 echo '----------------------------------------------'
 }
 
+
+#-------------------------------------------------------------------------------
+# debut du traitement et initialisation du fichier XML
+#-------------------------------------------------------------------------------
+export DATE_JOUR=`date +%Y%m%d-%H%M%S`
+export TMP_FILE=${PROJECT_NAME}.tmp
+export XML_FILE=${PROJECT_NAME}_${DATE_JOUR}.xml
+
+# insertion du header du fichier xml :
+print_xml_header $XML_FILE
 
 #-------------------------------------------------------------------------------
 # Infos générales 
@@ -352,10 +371,8 @@ mysql -uroot -proot --local-infile --database=$DB -e "$SQL"
 #export XML_FILE=${PROJECT_NAME}.xml
 #rm -f $TMP_FILE $XML_FILE 2>/dev/null
 
-# insertion du header du fichier xml :
-print_xml_header $XML_FILE
 
-mysql -uroot -proot --local-infile --database=$DB -e "$SQL" >> $TMP_FILE
+mysql -uroot -proot --local-infile --database=$DB -e "$SQL" > $TMP_FILE
 
 # insertion des données de la requête dans le fichier XML
 # fonction : "Nom de la feuille (sans espace)" "fichier CSV" "fichier XML"
@@ -379,12 +396,12 @@ order by $ORDERBY
 echo "Les serveurs en Enterprise Edition"
 
 export SELECT_NON_AIX="distinct c.physical_server, d.Host_Name, c.Marque, c.Model, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket "
+export FROM="$tDB d left join $tCPU c on d.HOST_NAME=c.Host_Name"
 export WHERE="d.DB_Edition='Enterprise' and c.os not like '%AIX%'"
 export ORDERBY="c.physical_server, c.Host_Name, c.os"
 
 export SQL="select $SELECT_NON_AIX
-FROM $tDB d left join $tCPU c 
-on c.Host_Name=d.Host_Name
+FROM $FROM
 where $WHERE
 order by $ORDERBY
 ;
@@ -395,44 +412,55 @@ mysql -uroot -proot --local-infile --database=$DB -e "$SQL"
 export SHEET_NAME=EE
 export_to_xml
 
+# Base de données en Enterprise Edition : calcul des processeurs pour serveurs non AIX
+export SHEET_NAME=Proc_EE
+print_proc_oracle $FROM'|'$WHERE
+
+
 echo "--> Les serveur AIX avec le même numéro de série sont sur le même chassis : à valider avec le client"
 
-export SELECT_AIX="distinct c.physical_server 'Physical Server',
+export xxxxxxSELECT_AIX="distinct c.physical_server,
 d.Host_Name Host,
 c.Model,
 c.OS,
-c.Processor_Type 'Proc Type',
-c.Partition_Number 'Part Nbr',
-c.Partition_Type 'Part Type',
-c.Partition_Mode 'Part Mode',
-c.Entitled_Capacity 'EC',
-c.Active_CPUs_in_Pool 'Act CPU',
-c.Online_Virtual_CPUs 'OV CPU',
-c.Active_Physical_CPUs 'Act Phy CPU'
+c.Processor_Type ,
+c.Partition_Number,
+c.Partition_Type,
+c.Partition_Mode,
+c.Entitled_Capacity,
+c.Active_CPUs_in_Pool,
+c.Online_Virtual_CPUs,
+c.Active_Physical_CPUs,
+	case Partition_Mode
+                when 'Uncapped' then @Core_Count := least(cast(Active_CPUs_in_Pool as signed), cast(Online_Virtual_CPUs as signed))
+                when 'Capped' then @Core_Count := cast(Entitled_Capacity as decimal(3,1))
+                when 'Donating' then @Core_Count := cast(Entitled_Capacity as decimal(3,1))
+        end
+        as Core_Count,
+        case left(reverse(Processor_Type),1)
+                when 5 then @Core_Factor := 0.75
+                when 6 then @Core_Factor := 1
+                when 7 then @Core_Factor := 1
+        end
+        as Core_Factor,
+        CEILING(@Core_Count * @Core_Factor) as CPU_Oracle
 "
 
+export FROM="$tDB d left join $tCPU c on d.HOST_NAME=c.Host_Name"
 export WHERE="d.DB_Edition='Enterprise' and c.os like '%AIX%'"
 
-SQL="select $SELECT_AIX
-FROM $tDB d left join $tCPU c
-on c.Host_Name=d.Host_Name
-where $WHERE
-order by $ORDERBY
-;
-"
+export SQL="select $SELECT_EE_AIX FROM $FROM where $WHERE order by $ORDERBY ;"
+
+
 mysql -uroot -proot --local-infile --database=$DB -e "$SQL"
 
 # insertion des données de la requête dans le fichier XML
 export SHEET_NAME=EE_AIX
 export_to_xml
 
-# Base de données en Enterprise Edition : calcul des processeurs
-export FROM="$tDB d left join $tCPU c on d.HOST_NAME=c.Host_Name"
-export WHERE="d.DB_Edition='Enterprise' and c.os='AIX'"
-
+# Base de données en Enterprise Edition : calcul des processeurs pour serveurs AIX
+export SHEET_NAME=Proc_EEAIX
 print_proc_oracle_aix $FROM'|'$WHERE
-
-# fnPrintLegende 
 
 #-------------------------------------------------------------------------------
 # Option RAC 
@@ -465,7 +493,29 @@ r.node_name 'Node name',
 d.db_edition 'Edition',
 c.Model,
 c.OS,
-c.Processor_Type 'Proc Type'
+c.Processor_Type ,
+-- ajout YAO 11/08
+c.Partition_Number,
+c.Partition_Type,
+c.Partition_Mode,
+c.Entitled_Capacity,
+c.Active_CPUs_in_Pool,
+c.Online_Virtual_CPUs,
+c.Active_Physical_CPUs,
+        case Partition_Mode
+                when 'Uncapped' then @Core_Count := least(cast(Active_CPUs_in_Pool as signed), cast(Online_Virtual_CPUs as signed))
+                when 'Capped' then @Core_Count := cast(Entitled_Capacity as decimal(3,1))
+                when 'Donating' then @Core_Count := cast(Entitled_Capacity as decimal(3,1))
+        end
+        as Core_Count,
+        case left(reverse(Processor_Type),1)
+                when 5 then @Core_Factor := 0.75
+                when 6 then @Core_Factor := 1
+                when 7 then @Core_Factor := 1
+        end
+        as Core_Factor,
+        CEILING(@Core_Count * @Core_Factor) as CPU_Oracle
+-- fin ajout
 from $tRAC r left join $tCPU c 
 	left join $tDB d on c.host_name=d.host_name 
 	on r.node_name=c.host_name 
@@ -482,6 +532,8 @@ export_to_xml
 export FROM="$tDB d left join $tCPU c on d.HOST_NAME=c.Host_Name"
 export WHERE="d.DB_Edition='Enterprise' and d.v_opt_rac not in ('FALSE','') and c.os='AIX'"
 
+# Base de données en Enterprise Edition : calcul des processeurs pour serveurs AIX
+export SHEET_NAME=Proc_RAC_AIX
 print_proc_oracle_aix $FROM'|'$WHERE
 
 
@@ -515,7 +567,7 @@ export SHEET_NAME=PART
 export_to_xml
 
 # serveurs AIX
-export SQL="$SELECT_EE_AIX
+export SQL="select $SELECT_EE_AIX
 FROM $tCPU c, $tSegments seg, $tDB d
 where c.Host_Name=d.Host_Name
 and c.Host_Name=seg.Host_Name 
@@ -541,6 +593,7 @@ export_to_xml
 export FROM="$tDB d left join $tCPU c on d.HOST_NAME=c.Host_Name"
 export WHERE="d.DB_Edition='Enterprise' and d.V_OPT_PART!=0 and c.os='AIX'"
 
+export SHEET_NAME=Proc_Part_AIX
 print_proc_oracle_aix $FROM'|'$WHERE
 
 #-------------------------------------------------------------------------------
@@ -561,7 +614,7 @@ mysql -uroot -proot --local-infile --database=$DB -e "$SQL"
 export SHEET_NAME=OLAP
 export_to_xml
 
-export SQL="$SELECT_EE_AIX
+export SQL="select $SELECT_EE_AIX
 FROM $tCPU c left join $tDB d
 on c.Host_Name=d.Host_Name 
 where d.DB_Edition='Enterprise' and c.os like '%AIX%'
@@ -579,6 +632,7 @@ export WHERE="d.DB_Edition='Enterprise' and c.os='AIX'"
 export WHERE=$WHERE" and d.OLAP_Installed='TRUE' and (d.OLAP_Cubes not in ('','0','-942') or d.Analytic_Workspaces not in ('0','','-942'))"
 export FROM="$tDB d left join $tCPU c on d.HOST_NAME=c.Host_Name"
 
+export SHEET_NAME=Proc_OLAP_AIX
 print_proc_oracle_aix $FROM'|'$WHERE
 
 
@@ -604,7 +658,7 @@ export_to_xml
 
 export WHERE="d.DB_Edition='Enterprise' and c.os='AIX' and d.v_opt_dm!=''"
 
-export SQL="$SELECT_EE_AIX
+export SQL="select $SELECT_EE_AIX
 FROM $FROM
 where $WHERE
 order by $ORDERBY
@@ -619,6 +673,7 @@ export_to_xml
 export WHERE="d.DB_Edition='Enterprise' and c.os='AIX' and d.v_opt_dm!=''"
 export FROM="$tDB d left join $tCPU c on d.HOST_NAME=c.Host_Name"
 
+export SHEET_NAME=Proc_DM_AIX
 print_proc_oracle_aix $FROM'|'$WHERE
 
 #-------------------------------------------------------------------------------
@@ -645,7 +700,7 @@ export_to_xml
 # export WHERE="d.DB_Edition='Enterprise' and (c.os like '%AIX%' or c.os is null) and d.v_opt_spatial!=''"
 export WHERE="d.DB_Edition='Enterprise' and c.os='AIX' and d.v_opt_spatial!=''"
 
-export SQL="$SELECT_EE_AIX
+export SQL="select $SELECT_EE_AIX
 FROM $FROM
 where $WHERE
 order by $ORDERBY
@@ -660,6 +715,7 @@ export_to_xml
 export FROM="$tDB d left join $tCPU c on d.HOST_NAME=c.Host_Name"
 export WHERE="d.DB_Edition='Enterprise' and c.os='AIX' and d.v_opt_spatial!=''"
 
+export SHEET_NAME=Proc_Spatial_AIX
 print_proc_oracle_aix $FROM'|'$WHERE
 
 
@@ -682,7 +738,7 @@ mysql -uroot -proot --local-infile --database=$DB -e "$SQL"
 export SHEET_NAME=ActiveDG
 export_to_xml
 
-export SQL="$SELECT_EE_AIX, d.version
+export SQL="select $SELECT_EE_AIX, d.version
 FROM $tDbaFeatures d left join $tCPU c on c.Host_Name=d.Host_Name 
 where 
 -- d.DB_Edition='Enterprise' and 
@@ -701,6 +757,7 @@ export_to_xml
 export FROM="$tDbaFeatures d left join $tCPU c on d.HOST_NAME=c.Host_Name"
 export WHERE="name like '%Active Data Guard%'"
 
+export SHEET_NAME=Proc_ADG_AIX
 print_proc_oracle_aix $FROM'|'$WHERE
 
 #-------------------------------------------------------------------------------
@@ -728,7 +785,7 @@ export_to_xml
 
 export WHERE="c.Host_Name=d.Host_Name and c.os='AIX' and d.Tuning_Pack_Used!='0'"
 
-export SQL="$SELECT_EE_AIX, d.DB_Edition
+export SQL="select $SELECT_EE_AIX, d.DB_Edition
 FROM $FROM
 where $WHERE
 order by $ORDERBY
@@ -744,6 +801,7 @@ export_to_xml
 export FROM="$tDbaFeatures d left join $tCPU c on d.HOST_NAME=c.Host_Name"
 export WHERE="name in ($TUNING_PACK_FEATURES)"
 
+export SHEET_NAME=Proc_Tun_AIX
 print_proc_oracle_aix $FROM'|'$WHERE
 
 
@@ -774,7 +832,7 @@ export_to_xml
 
 export WHERE="c.Host_Name=d.Host_Name and c.os='AIX' and d.Diag_Pack_Used!='0'"
 
-export SQL="$SELECT_EE_AIX, d.db_edition
+export SQL="select $SELECT_EE_AIX, d.db_edition
 FROM $FROM
 where $WHERE
 order by $ORDERBY
@@ -790,6 +848,7 @@ export_to_xml
 export FROM="$tDbaFeatures d left join $tCPU c on d.HOST_NAME=c.Host_Name"
 export WHERE="name in ($DIAG_PACK_FEATURES)"
 
+export SHEET_NAME=Proc_Diag_AIX
 print_proc_oracle_aix $FROM'|'$WHERE
 
 echo "Liste des serveurs qui doivent être licenciés en DIAGNOSTICS PACK car ils utilisent TUNING PACK"
@@ -821,6 +880,7 @@ export FROM="$tDbaFeatures d left join $tCPU c on d.HOST_NAME=c.Host_Name"
 export WHERE="name in ($TUNING_PACK_FEATURES)"
 export WHERE=$WHERE" and name not in ($DIAG_PACK_FEATURES)"
 
+export SHEET_NAME=Proc_Diag2_AIX
 print_proc_oracle_aix $FROM'|'$WHERE
 
 #-------------------------------------------------------------------------------
@@ -848,7 +908,7 @@ export SHEET_NAME=AdvancedSec
 export_to_xml
 
 # SErveurs AIX
-export SQL="$SELECT_EE_AIX
+export SQL="select $SELECT_EE_AIX
 FROM $FROM
 where $WHERE
 order by $ORDERBY
@@ -865,6 +925,7 @@ export FROM="$tDbaFeatures d left join $tCPU c on d.HOST_NAME=c.Host_Name"
 export WHERE="name in ($ADVANCED_SEC_FEATURES)"
 
 
+export SHEET_NAME=Proc_AdvSec_AIX
 print_proc_oracle_aix $FROM'|'$WHERE
 
 
@@ -902,6 +963,11 @@ print_proc_oracle_aix $WHERE
 
 COMMSQLP
 print_xml_footer $XML_FILE
+
+
+echo "-------------------------------------------------------------------------------"
+echo "Fichier à ouvrir dans Excel : $XML_FILE"
+echo "-------------------------------------------------------------------------------"
 
 #-------------------------------------------------------------------------------
 # FIN
