@@ -106,15 +106,10 @@ fnCreateTable $TABLE $HEADER
 KEY=Host_Name
 fnAddPrimaryKey $TABLE $KEY
 
-#mysql -uroot -proot --local-infile --database=$DB -e "
-#ALTER TABLE ${1}_cpu ADD PRIMARY KEY (Host_Name);"
-#echo "Création de la clé primaire ... OK"
-
 # creation de la table pour les serveurs physiques
 TABLE=$1"_pservers"
 HEADER="Physical_Server,Socket,Cores_per_Socket"
 fnCreateTable $TABLE $HEADER
-
 # ajout de la clé primaire
 KEY=Physical_Server
 fnAddPrimaryKey $TABLE $KEY
@@ -124,4 +119,15 @@ fnAddPrimaryKey $TABLE $KEY
 TABLE=$1"_olap"
 HEADER="GREPME,Host_Name,Instance_Name,Sysdate,Host_name_2,Instance_Name_2,Olap_Header,ANALYTIC_WORKSPACES_HEADER,Count_Nbr,Count_Txt,OWNER,AW_NUMBER,AW_NAME,PAGESPACES,GENERATIONS"
 fnCreateTable $TABLE $HEADER
+# ajout de la clé primaire
+KEY=host_name,instance_name,OWNER,AW_NAME
+fnAddPrimaryKey $TABLE $KEY
+
+# creation de la table pour les données Spatial
+TABLE=$1"_spatial"
+HEADER="GREPME,Host_Name,Instance_Name,Sysdate,Host_name_2,Instance_Name_2,Spatial,Metadata,Count_Nbr,Count_Txt,OWNER,name,geometry"
+fnCreateTable $TABLE $HEADER
+# ajout de la clé primaire sur cette table 
+KEY=HOST_NAME,INSTANCE_NAME,OWNER,NAME
+fnAddPrimaryKey $TABLE $KEY
 

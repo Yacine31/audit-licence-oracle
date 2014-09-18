@@ -4,6 +4,62 @@
 		"selected_items":
 		[
 			[
+				"DIA",
+				"DIAG_PACK_FEATURES"
+			],
+			[
+				"Pa",
+				"Pack"
+			],
+			[
+				"D",
+				"Diagnostics"
+			],
+			[
+				"PRO",
+				"PROJECT_NAME"
+			],
+			[
+				"SELE",
+				"SELECT"
+			],
+			[
+				"E",
+				"Edition"
+			],
+			[
+				"Sp",
+				"SPATIAL"
+			],
+			[
+				"aw_n",
+				"AW_NAME"
+			],
+			[
+				"hos",
+				"host_name"
+			],
+			[
+				"SELEC",
+				"SELECT_NON_AIX"
+			],
+			[
+				"CPU",
+				"CPU_Oracle"
+			],
+			[
+				"Phys",
+				"physical_server"
+			],
+			[
+				"inst",
+				"instance_name"
+			],
+			[
+				"nb_",
+				"nb_threads"
+			],
+			[
 				"nb",
 				"nb_serveurs_win"
 			],
@@ -14,10 +70,6 @@
 			[
 				"nb_ser",
 				"nb_serveurs_linux"
-			],
-			[
-				"nb_",
-				"nb_bases_ee"
 			],
 			[
 				"fn",
@@ -108,93 +160,26 @@
 	"buffers":
 	[
 		{
+			"file": "reports_rac.sh",
+			"settings":
+			{
+				"buffer_size": 3768,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "db_options.sh",
+			"settings":
+			{
+				"buffer_size": 6286,
+				"line_ending": "Unix"
+			}
+		},
+		{
 			"file": "lms_cpu.sh",
 			"settings":
 			{
-				"buffer_size": 13618,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "lms_db.sh",
-			"settings":
-			{
-				"buffer_size": 9464,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "reports.sh",
-			"settings":
-			{
-				"buffer_size": 23724,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "initdb.sh",
-			"settings":
-			{
-				"buffer_size": 4528,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "extract.sh",
-			"settings":
-			{
-				"buffer_size": 1700,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "loaddata.sh",
-			"settings":
-			{
-				"buffer_size": 430,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "connection.php",
-			"settings":
-			{
-				"buffer_size": 256,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "databases.php",
-			"settings":
-			{
-				"buffer_size": 879,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "servers.php",
-			"settings":
-			{
-				"buffer_size": 989,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "db_se.php",
-			"settings":
-			{
-				"buffer_size": 846,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"contents": "<?php\n\ninclude('connection.php'); \n$db = mysql_connect('localhost', 'root', 'root');\n\nmysql_select_db($database, $db);\n\n$sql=\"select distinct physical_server, host_Name, Marque, Model, Processor_Type, OS, Socket\";\n$sql.=\" from cma_version v left join cma_cpu c on v.host_name=c.host_name where v.banner like '%Enterprise%'\";\n$sql.=\" order by physical_server,v.Host_Name\";\n\n$rs = mysql_query($sql) or die('Erreur SQL '.$sql. ' ' .mysql_error());\n\n$total_rows=mysql_num_rows($rs);\n\nif ($total_rows > 0) {\n	while ($data = mysql_fetch_assoc($rs))\n   	{ \n   		echo \"physical_server=\".$data['PHYSICAL_SERVER'].\"\\t\";\n   		echo \"host_name=\".$data['Host_Name'].\"\\t\";\n   		echo \"socket=\".$data['Socket'].\"\\n\\r\";\n   	} \n}\nelse\n	echo \"Aucune information à afficher \\n\\r\";\n\n// on ferme la connexion à mysql \nmysql_close(); \n\n?>\n",
-			"file": "db_ee.php",
-			"file_size": 730,
-			"file_write_time": 1407632557000000,
-			"settings":
-			{
-				"buffer_size": 815,
+				"buffer_size": 14328,
 				"line_ending": "Unix"
 			}
 		}
@@ -223,13 +208,30 @@
 	},
 	"file_history":
 	[
+		"/home/merlin/lms_scripts/lms_db.sh",
+		"/home/merlin/lms_scripts/reports2xml.sh",
+		"/home/merlin/lms_scripts/reports_tuning.sh",
+		"/home/merlin/lms_scripts/reports_diagnostics.sh",
+		"/home/merlin/lms_scripts/reports_olap.sh",
 		"/home/merlin/lms_scripts/extract.sh",
-		"/home/merlin/lms_scripts/lms_cpu.sh",
+		"/home/merlin/lms_scripts/db_options.sh",
+		"/home/merlin/lms_scripts/initdb.sh",
+		"/home/merlin/lms_scripts/fonctions_xml.sh",
+		"/home/merlin/lms_scripts/fonctions.sh",
+		"/home/merlin/lms_scripts/reports_spatial.sh",
+		"/home/merlin/lms_scripts/reports_partitioning.sh",
+		"/home/merlin/lms_scripts/reports_rac.sh",
+		"/home/merlin/lms_scripts/intel_query.sh",
+		"/home/merlin/lms_scripts/db_ee.php",
+		"/home/merlin/lms_scripts/db_se.php",
+		"/home/merlin/lms_scripts/servers.php",
+		"/home/merlin/lms_scripts/databases.php",
+		"/home/merlin/lms_scripts/connection.php",
+		"/home/merlin/lms_scripts/loaddata.sh",
 		"/home/merlin/lms_scripts/reports.sh",
+		"/home/merlin/lms_scripts/lms_cpu.sh",
 		"/home/merlin/lms_scripts/mktable.sh",
 		"/home/merlin/lms_scripts/partitions.sh",
-		"/home/merlin/lms_scripts/loaddata.sh",
-		"/home/merlin/lms_scripts/lms_db.sh",
 		"/home/merlin/Documents/lms_scripts/lms_db_1.5.sh",
 		"/home/merlin/Documents/lms_scripts/extract.sh",
 		"/home/merlin/Documents/lms_scripts/reports_1.5.sh",
@@ -258,6 +260,19 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"all_cpu_tmp",
+			"all_dba_feature",
+			"TUNING PACK",
+			"TUNING_PACK_FEATURES",
+			"d.first_usage_date,",
+			"vSpatial",
+			"all_version",
+			"from",
+			"all_cpu_tmp",
+			"all_spatial",
+			"all_version",
+			"$1",
+			"[$DEBUG == 1]",
 			"os",
 			"OS",
 			"os",
@@ -302,6 +317,7 @@
 		"regex": false,
 		"replace_history":
 		[
+			"[ \"$DEBUG\" == \"1\" ]",
 			"cpu.Partition_Type,cpu.Partition_Mode"
 		],
 		"reverse": false,
@@ -318,45 +334,44 @@
 			[
 				{
 					"buffer": 0,
-					"file": "lms_cpu.sh",
+					"file": "reports_rac.sh",
 					"settings":
 					{
-						"buffer_size": 13618,
+						"buffer_size": 3768,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								9491,
-								9491
+								522,
+								522
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/ShellScript/Shell-Unix-Generic.tmLanguage",
-							"translate_tabs_to_spaces": false
+							"syntax": "Packages/ShellScript/Shell-Unix-Generic.tmLanguage"
 						},
 						"translation.x": 0.0,
-						"translation.y": 2278.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
 					"buffer": 1,
-					"file": "lms_db.sh",
+					"file": "db_options.sh",
 					"settings":
 					{
-						"buffer_size": 9464,
+						"buffer_size": 6286,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								0,
-								0
+								1118,
+								1118
 							]
 						],
 						"settings":
@@ -365,51 +380,25 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 2805.0,
+						"translation.y": 2205.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
 					"buffer": 2,
-					"file": "reports.sh",
+					"file": "lms_cpu.sh",
 					"settings":
 					{
-						"buffer_size": 23724,
+						"buffer_size": 14328,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								14097,
-								14097
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/ShellScript/Shell-Unix-Generic.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 2516.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 3,
-					"file": "initdb.sh",
-					"settings":
-					{
-						"buffer_size": 4528,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								0,
-								0
+								5696,
+								5696
 							]
 						],
 						"settings":
@@ -418,190 +407,7 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 612.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 4,
-					"file": "extract.sh",
-					"settings":
-					{
-						"buffer_size": 1700,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								1700,
-								1700
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/ShellScript/Shell-Unix-Generic.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 459.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 5,
-					"file": "loaddata.sh",
-					"settings":
-					{
-						"buffer_size": 430,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								0,
-								0
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/ShellScript/Shell-Unix-Generic.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 6,
-					"file": "connection.php",
-					"settings":
-					{
-						"buffer_size": 256,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								0,
-								0
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/PHP/PHP.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 7,
-					"file": "databases.php",
-					"settings":
-					{
-						"buffer_size": 879,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								879,
-								879
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/PHP/PHP.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 8,
-					"file": "servers.php",
-					"settings":
-					{
-						"buffer_size": 989,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								335,
-								335
-							]
-						],
-						"settings":
-						{
-							"auto_name": "",
-							"syntax": "Packages/PHP/PHP.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 9,
-					"file": "db_se.php",
-					"settings":
-					{
-						"buffer_size": 846,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								846,
-								846
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/PHP/PHP.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 10,
-					"file": "db_ee.php",
-					"settings":
-					{
-						"buffer_size": 815,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								222,
-								222
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/PHP/PHP.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
+						"translation.y": 2250.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"

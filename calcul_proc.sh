@@ -42,7 +42,7 @@ Partition_Type, Active_Physical_CPUs, Entitled_Capacity, Active_CPUs_in_Pool, On
                 when 7 then @Core_Factor := 1
         end
         as Core_Factor,
-        CEILING(@Core_Count * @Core_Factor) as CPU_Oracle
+        CEILING(cast(@Core_Count as decimal(4,2))* cast(@Core_Factor as decimal(4,2))) as CPU_Oracle
 from $tDbaFeatures d left join $tCPU c on d.HOST_NAME=c.Host_Name
 where $WHERE;
 --

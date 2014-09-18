@@ -77,29 +77,29 @@ function init_variables {
 
 
 function get_hostname {
-	HNAME=`cat $1 | grep '^Machine Name' | sort | uniq | cut -d'=' -f2 | sed 's/\\r//'`
+	HNAME=`cat "$@" | grep '^Machine Name' | sort | uniq | cut -d'=' -f2 | sed 's/\\r//'`
 	# HNAME=`sed -n 'l' $1 | grep '^Machine Name' | sort | uniq | cut -d'=' -f2 | sed 's/\r//'`
         # sinon on est en présence de Windows
         if [ ! "$HNAME" ]; then
-                HNAME=`cat $1 | grep '^Computer Name: ' | sort | uniq | sed 's/Computer Name: //' | sed 's/\\r//'`
+                HNAME=`cat "$@" | grep '^Computer Name: ' | sort | uniq | sed 's/Computer Name: //' | sed 's/\\r//'`
         fi
 }
 
 function get_os {
 	# cette ligne marche pour les Unix et Linux, SunOS, AIX
-	OS=`cat $1 | grep '^Operating System Name' | sort | uniq | cut -d'=' -f2 `
+	OS=`cat "$@" | grep '^Operating System Name' | sort | uniq | cut -d'=' -f2 `
 
 	# pour les Unix on récupère aussi la release
-	RELEASE=`cat $f | grep "^Operating System Release=" | sort | uniq | cut -d'=' -f2`
+	RELEASE=`cat "$@" | grep "^Operating System Release=" | sort | uniq | cut -d'=' -f2`
 	
 	# si la chaine de caractère est vide, alors on cherche un Windows francais 2008
 	if [ ! "$OS" ]; then
-		OS=`cat $1 | grep "d'exploitation" | cut -d' ' -f3-`
+		OS=`cat "$@" | grep "d'exploitation" | cut -d' ' -f3-`
 	fi
 
 	# sinon c 'est un windows anglais 
 	if [ ! "$OS" ]; then
-		OS=`cat $1 | grep "^Operating System" -A1 | grep "Caption: " | tr -s ' ' | sed 's/ Caption: //' | sed 's/\\r//'`
+		OS=`cat "$@" | grep "^Operating System" -A1 | grep "Caption: " | tr -s ' ' | sed 's/ Caption: //' | sed 's/\\r//'`
 	fi
 	
 	# quelque soit l'OS on prend juste le premier mot (Microsoft souvent suivi de plusieurs informations
@@ -109,39 +109,41 @@ function get_os {
 
 function get_marque {
 	# cette ligne marche pour Linux
-	MARQUE=`cat $f | grep -v 'grep' | grep -i 'System Information' -A1 | grep -i 'Manufacturer' | cut -d':' -f2 |  sed 's/^ *//g' | head -1`
+	MARQUE=`cat "$@" | grep -v 'grep' | grep -i 'System Information' -A1 | grep -i 'Manufacturer' | cut -d':' -f2 |  sed 's/^ *//g' | head -1`
 	
 	# windows 2003, 2008
 	if [ ! "$MARQUE" ]; then
-		MARQUE=`cat $f | grep -i '^System$' -A2 | grep -i 'Manufacturer:' | sed 's/  Manufacturer: //' | head -1`
+		MARQUE=`cat "$@" | grep -i '^System' -A2 | grep -i 'Manufacturer:' | sed 's/  Manufacturer: //' | head -1`
 	fi
 }
 
 function get_modele {
 	# cette linux marche pour linux
-	MODEL=`cat $f | grep -v 'grep' | grep -i 'System Information' -A2 | grep -i 'Product Name:' | cut -d':' -f2 |  sed 's/^ *//g' | head -1`
+	MODEL=`cat "$@" | grep -v 'grep' | grep -i 'System Information' -A2 | grep -i 'Product Name:' | cut -d':' -f2 |  sed 's/^ *//g' | head -1`
 	
 	# model pour HP-UX
 	if [ ! "$MODEL" ]; then
-		MODEL=`cat $f | grep -v 'grep' | grep -i 'MACHINE_MODEL' -A1 | grep -v 'MACHINE_MODEL' | grep -v '\-\-' | sort | uniq`
+		MODEL=`cat "$@" | grep -v 'grep' | grep -i 'MACHINE_MODEL' -A1 | grep -v 'MACHINE_MODEL' | grep -v '\-\-' | sort | uniq`
 	fi
 
 	# modele pour windows 2003
 	if [ ! "$MODEL" ]; then
-		MODEL=`cat $f | grep -i '^System$' -A2 | grep -i 'Model:' | sed 's/  Model: //' | head -1`
+		MODEL=`cat "$@" | grep -i '^System' -A3 | grep -i 'Model:' | sed 's/  Model: //' | head -1`
 	fi
 	
 	# modele pour SunOS
 	if [ ! "$MODEL" ]; then
-		MODEL=`cat $f | grep -i '/usr/sbin/prtdiag' -A1 | tail -1 | cut -d':' -f2 |  sed 's/^ *//g' | head -1`
+		MODEL=`cat "$@" | grep -i '/usr/sbin/prtdiag' -A1 | tail -1 | cut -d':' -f2 |  sed 's/^ *//g' | head -1`
 	fi
 
 	# MODEL pour Aix
 	if [ ! "$MODEL" ]; then
-		MODEL=`cat $f | grep -A1 '/usr/sbin/prtconf' | tail -1 | cut -d':' -f2 | sed 's/^ //'| head -1`
+		MODEL=`cat "$@" | grep -A1 '/usr/sbin/prtconf' | tail -1 | cut -d':' -f2 | sed 's/^ //'| head -1`
 		# la ligne suivante ne marche pas en cas de systeme francais à cause des caracteres accentues
-		# MODEL=`cat $f | grep -i '^System Model:' | tail -1 | sed 's/^System Model: //g'`
+		# MODEL=`cat "$@" | grep -i '^System Model:' | tail -1 | sed 's/^System Model: //g'`
 	fi
+
+	MODEL=$(echo $MODEL | sed 's/System Model: //g')
 }
 
 function get_processor_type {
@@ -150,10 +152,10 @@ function get_processor_type {
 		'SunOS' )
 			case $RELEASE in
 				'5.10' )
-					TYPE_PROC=`cat $f | grep -A1 "^The physical processor has" | tail -1 | awk '{print $1}'`
+					TYPE_PROC=`cat "$@" | grep -A1 "^The physical processor has" | tail -1 | awk '{print $1}'`
 				;;
 				'SunOS 5.9' )
-					TYPE_PROC=`cat $f | grep -A2 "^CPU" | tail -1 | awk '{print $5}'`
+					TYPE_PROC=`cat "$@" | grep -A2 "^CPU" | tail -1 | awk '{print $5}'`
 				;;
 			esac
 		;;
@@ -164,26 +166,27 @@ function get_processor_type {
 	esac
 
 	# cette ligne marche pour linux
-	TYPE_PROC=`cat $f | grep -i '^model name' | sort | uniq | cut -d':' -f2 |  sed 's/^ *//g'`
+	TYPE_PROC=`cat "$@" | grep -i '^model name' | sort | uniq | cut -d':' -f2 |  sed 's/^ *//g'`
 	
 	# windows 2003 et 2008
 	if [ ! "$TYPE_PROC" ]; then
-		TYPE_PROC=`cat $f | grep -i '^Processors$' -A1 | grep -i 'CPU Name:' | sed 's/  CPU Name: //'`
+		# TYPE_PROC=`cat "$@" | grep -i '^Processors' -A1 | grep -i 'CPU Name:' | sed 's/  CPU Name: //'`
+		TYPE_PROC=`cat "$@" | grep ProcessorNameString | sort | head -1 | cut -d'=' -f2 | tr -d '"' | tr -s '  ' ' '`
 	fi
 	# TYPE PROC pour HP-UX B.11.31
 	if [ "$OS" == "HP-UX" ]; then
 		if [ "$RELEASE" == "B.11.31" ]; then
-			TYPE_PROC=`cat $f | grep '^CPU info:' -A1 | tail -1 | sed 's/^ *//g'`
+			TYPE_PROC=`cat "$@" | grep '^CPU info:' -A1 | tail -1 | sed 's/^ *//g'`
 			#  | tr -s ' ' | cut -d' ' -f3-`
 		elif [ "$RELEASE" == "B.11.23" ]; then
-			TYPE_PROC=`cat $f | grep 'processor model:' | cut -d':' -f2 | tr -s ' ' | cut -d' ' -f3-`
+			TYPE_PROC=`cat "$@" | grep 'processor model:' | cut -d':' -f2 | tr -s ' ' | cut -d' ' -f3-`
 		fi
 	fi
 
 	# TYPE PROC pour AIX
         if [ ! "$TYPE_PROC" ]; then
-                # TYPE_PROC=`cat $f | grep -i '^Processor Type:' | tail -1 | sed 's/^Processor Type: //g'`
-                TYPE_PROC=`cat $f | grep -A3 '/usr/sbin/prtconf' | tail -1 | cut -d':' -f2 | sed 's/^ //'`
+                # TYPE_PROC=`cat "$@" | grep -i '^Processor Type:' | tail -1 | sed 's/^Processor Type: //g'`
+                TYPE_PROC=`cat "$@" | grep -A3 '/usr/sbin/prtconf' | tail -1 | cut -d':' -f2 | sed 's/^ //'`
         fi
 	
 	# cette commande supprime les espaces dans la chaine de caracteres
@@ -201,8 +204,9 @@ function get_sockets_number {
 	fi
 
 	case $OS in 
-		*Windows* )
-	        NB_SOCKETS=`cat $f | grep -i 'NumberOfProcessors:' | tail -1 | cut -d: -f2 | tr -d ' '`
+		*Microsoft* )
+	        # NB_SOCKETS=`cat "$@" | grep -i 'NumberOfProcessors:' | tail -1 | cut -d: -f2 | tr -d ' '`
+	        NB_SOCKETS=`cat "$@" | grep -i 'NumberOfProcessors:' | tail -1 |  egrep -o '([0-9])*'`
 		;;
 
 		HP-UX )
@@ -211,15 +215,15 @@ function get_sockets_number {
 				# si ia64 on applique cette formule :
 				v_ia64=`echo $MODEL | grep 'ia64'`
 				if [ "$v_ia64" ]; then 
-					NB_SOCKETS=`cat $f | grep '^CPU info:' -A1 | tail -1 | tr -s ' '`
+					NB_SOCKETS=`cat "$@" | grep '^CPU info:' -A1 | tail -1 | tr -s ' '`
 					NB_SOCKETS=${NB_SOCKETS:1:1}
 				else
-					NB_SOCKETS=`cat $f |  grep '^processor' | wc -l`
+					NB_SOCKETS=`cat "$@" |  grep '^processor' | wc -l`
 				fi
 				# si release  B.11.23 alors c est cette commande
 				if [ "$RELEASE" == "B.11.23" ]; then
-					NB_SOCKETS=`cat $f | grep 'Number of enabled sockets =' | cut -d'=' -f2 | sed 's/^ *//g'`
-					# NB_SOCKETS=`cat $f | grep "^+ /usr/contrib/bin/machinfo" -A6 | tail -1 | egrep -o [0-9]`
+					NB_SOCKETS=`cat "$@" | grep 'Number of enabled sockets =' | cut -d'=' -f2 | sed 's/^ *//g'`
+					# NB_SOCKETS=`cat "$@" | grep "^+ /usr/contrib/bin/machinfo" -A6 | tail -1 | egrep -o [0-9]`
 				fi
 			fi
 		;;
@@ -227,17 +231,17 @@ function get_sockets_number {
 		AIX )
 			# nombre de processeurs et coeurs pour AIX
 			if [ "$OS" == "AIX" ]; then
-				NB_SOCKETS=`cat $f | egrep -i '^Number Of Processors:|^Nombre de processeurs' | tail -1 | cut -d':' -f2 | tr -d ' '`
+				NB_SOCKETS=`cat "$@" | egrep -i '^Number Of Processors:|^Nombre de processeurs' | tail -1 | cut -d':' -f2 | tr -d ' '`
 			fi
 		;;
 
 		'SunOS' )
 			case $RELEASE in 
 				'5.9' )
-					NB_SOCKETS=`cat $f | grep "^Status of processor" | wc -l`
+					NB_SOCKETS=`cat "$@" | grep "^Status of processor" | wc -l`
 				;;
 				'5.10' )
-					NB_SOCKETS=`cat $f | grep "^The physical processor has" | wc -l`
+					NB_SOCKETS=`cat "$@" | grep "^The physical processor has" | wc -l`
 				;;
 			esac
 		;;
@@ -245,7 +249,7 @@ function get_sockets_number {
 		Linux )
 			# pour linux les infos sont dans le fichier après la commande dmidecode --type processor
 			# si ID est different de 00 00 00 00 00 00 alors le PROC existent bien et on le compte
-			NB_SOCKETS=`cat $f | grep "ID:" | grep -v "00 00 00 00 00 00 00 00" | wc -l`
+			NB_SOCKETS=`cat "$@" | grep "ID:" | grep -v "00 00 00 00 00 00 00 00" | wc -l`
 		;;
 
 		* )
@@ -265,22 +269,23 @@ function get_core_number {
 	fi
 
 	case $OS in 
-		*Windows* )
-	        NB_COEURS=`cat $f | grep -i 'CPU NumberOfCores:' | tail -1 | cut -d: -f2 | tr -d ' '`
-			NB_COEURS=${NB_COEURS:0:2}
-			# cette chaine retourne le nombre de coeurs ou "PA" pour PATCH NOT AVAILABLE
-			if [ $NB_COEURS == "PA" ]; then NB_COEURS="ND PATCH ERROR"; fi
+		*Microsoft* )
+	        NB_COEURS=`cat "$@" | grep -i 'CPU NumberOfCores:' | tail -1 | cut -d: -f2 | tr -d ' '`
+		NB_COEURS=${NB_COEURS:0:2}
+		# cette chaine retourne le nombre de coeurs ou "PA" pour PATCH NOT AVAILABLE
+		if [ $NB_COEURS == "PA" ]; then NB_COEURS="ND PATCH ERROR"; fi
+		# NB_COEURS_TOTAL=`cat "$@" | grep '\\CentralProcessor\\' | wc -l`
 		;;
 
 		HP-UX )
 			# si release  B.11.23 alors c est cette commande
 			if [ "$RELEASE" == "B.11.23" ]; then
-				NB_COEURS=`cat $f | grep 'Cores per socket =' | cut -d'=' -f2 | sed 's/^ *//g'`
-				# NB_COEURS=`cat $f | grep "^+ /usr/contrib/bin/machinfo" -A7 | tail -1 | awk '{print $1}'`
+				NB_COEURS=`cat "$@" | grep 'Cores per socket =' | cut -d'=' -f2 | sed 's/^ *//g'`
+				# NB_COEURS=`cat "$@" | grep "^+ /usr/contrib/bin/machinfo" -A7 | tail -1 | awk '{print $1}'`
 				# NB_COEURS_TOTAL marche pour toutes les versions Unix, 
 				export NB_COEURS_TOTAL=`expr $NB_COEURS \* $NB_SOCKETS`
 				# pas besoin de cette commande specifique
-				# NB_COEURS_TOTAL=`cat $f | grep 'Number of enabled CPUs' | cut -d'=' -f2 | sed 's/^ *//g'`
+				# NB_COEURS_TOTAL=`cat "$@" | grep 'Number of enabled CPUs' | cut -d'=' -f2 | sed 's/^ *//g'`
 			fi
 		;;
 
@@ -290,12 +295,12 @@ function get_core_number {
 		;;
 
 		'SunOS' )
-			NB_COEURS=`cat $f | grep "^The physical processor has" | head -1 | egrep -o '[0-9]' | head -1`
+			NB_COEURS=`cat "$@" | grep "^The physical processor has" | head -1 | egrep -o '[0-9]' | head -1`
 		;;
 		
 		Linux )
 			# pour linux les infos sont dans le fichier après la commande dmidecode --type processor
-			NB_COEURS=`cat $f | grep "^cpu cores" | sort | uniq | cut -d':' -f2 | egrep -o '[0-9]'`
+			NB_COEURS=`cat "$@" | grep "^cpu cores" | sort | uniq | cut -d':' -f2 | egrep -o '[0-9]'`
 		;;
 
 		* )
@@ -308,23 +313,27 @@ function get_aix_params {
 
 	# parametres pecifique AIX 
 	if [ "$OS" == "AIX" ]; then
-		Node_Name=`cat $f | grep /usr/bin/lparstat -A1 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
-		Partition_Name=`cat $f | grep /usr/bin/lparstat -A2 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
-		Partition_Number=`cat $f | grep /usr/bin/lparstat -A3 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
-		Partition_Type=`cat $f | grep /usr/bin/lparstat -A4 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
-		Partition_Mode=`cat $f | grep /usr/bin/lparstat -A5 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
-		# Entitled_Capacity=`cat $f | grep /usr/bin/lparstat -A6 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'| sed 's/\./,/g'`
-		Entitled_Capacity=`cat $f | grep /usr/bin/lparstat -A6 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
-		Active_CPUs_in_Pool=`cat $f | grep /usr/bin/lparstat -A21 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
-		Online_Virtual_CPUs=`cat $f | grep /usr/bin/lparstat -A9 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
-		Machine_Serial_Number=`cat $f | grep /usr/sbin/prtconf -A2 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
+		Node_Name=`cat "$@" | grep /usr/bin/lparstat -A1 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
+		Partition_Name=`cat "$@" | grep /usr/bin/lparstat -A2 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
+		Partition_Number=`cat "$@" | grep /usr/bin/lparstat -A3 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
+		Partition_Type=`cat "$@" | grep /usr/bin/lparstat -A4 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
+		Partition_Mode=`cat "$@" | grep /usr/bin/lparstat -A5 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
+		# Entitled_Capacity=`cat "$@" | grep /usr/bin/lparstat -A6 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'| sed 's/\./,/g'`
+		Entitled_Capacity=`cat "$@" | grep /usr/bin/lparstat -A6 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
+		Active_CPUs_in_Pool=`cat "$@" | grep /usr/bin/lparstat -A21 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
+		Online_Virtual_CPUs=`cat "$@" | grep /usr/bin/lparstat -A9 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
+		Machine_Serial_Number=`cat "$@" | grep /usr/sbin/prtconf -A2 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
 		# pour certains serveur Lorsque Serial Number retourne "Not Available", il manque un retour chariot
 		# la ligne suivante est collée au résulat ce qui donne : Not AvailableProcessor Type
 		# On remplace donc "Not Available" et "Not AvailableProcessor Type" par "NA"
 		Serial=${Machine_Serial_Number:0:3}
-		if [ "$Serial" == "Not" ]; then Machine_Serial_Number="NA"; fi
+		# if [ "$Serial" == "Not" ]; then Machine_Serial_Number="NA"; fi
+		# voir si la ligne "LPAR Virtual Serial Adapter" peut remplacer le Serial Number = Not Available
+		if [ "$Serial" == "Not" ]; then
+			Machine_Serial_Number=`cat "$@" | grep "LPAR Virtual Serial Adapter" | awk '{print $3}' | cut -d'-' -f1 | cut -d'.' -f3`
+		fi
 
-		Active_Physical_CPUs=`cat $f | grep /usr/bin/lparstat -A20 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
+		Active_Physical_CPUs=`cat "$@" | grep /usr/bin/lparstat -A20 | tail -1 | cut -d':' -f2 | sed 's/^ *//g'`
 
 		if [ $(echo $Partition_Type | grep -i "Dedicated|Donat") ]; then VIRTUEL="FALSE"; else VIRTUEL="TRUE"; fi
 	fi
@@ -401,18 +410,18 @@ do
 	echo "Traitement du fichier : $f"
 	dos2unix $f 2>/dev/null
 	init_variables
-	get_hostname $f
-	get_os $f
-	get_marque $f
-	get_virtuel $f
-	get_modele $f
-	get_processor_type $f
-	get_sockets_number $f
-	get_core_number $f
-	get_aix_params $f
+	get_hostname "$f"
+	get_os "$f"
+	get_marque "$f"
+	get_virtuel "$f"
+	get_modele "$f"
+	get_processor_type "$f"
+	get_sockets_number "$f"
+	get_core_number "$f"
+	get_aix_params "$f"
 	# le paramètre virtuel est calculé en dernier car il se base sur plusieurs paramètres
 	# qui sont calculés avant : OS, PARAMS AIX, MARQUE
-	get_virtuel $f
+	get_virtuel "$f"
 	print_data 
 done
 # mise en forme du fichier de sortie
