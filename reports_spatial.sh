@@ -28,6 +28,12 @@ order by physical_server, s.host_name, s.instance_name, s.owner"
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
+export SHEET_NAME=Spatial
+# ouverture d'une feuille Excel
+open_xml_sheet
+# export des données
+export_to_xml
+
 
 echo "Liste des serveurs avec option SPATIAL/LOCATOR en Enterprise Edition"
 
@@ -42,6 +48,8 @@ order by physical_server, s.host_name, s.instance_name, s.owner "
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
+# export des données
+export_to_xml
 #--------- Calcul des processeurs : OS != AIX
 
 echo "Calcul des processeurs Oracle par serveur physique (OS!=AIX) :"
@@ -59,8 +67,7 @@ order by physical_server"
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
-# insertion des données de la requête dans le fichier XML
-export SHEET_NAME=SPATIAL
+# export des données
 export_to_xml
 
 #--------- Calcul des processeurs : OS == AIX
@@ -121,6 +128,8 @@ group by physical_server;
 
 select * from proc_oracle;"
 
+# export des données
+export_to_xml
 
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
@@ -130,3 +139,10 @@ export SQL="select sum(Proc_Oracle_Calcules) from proc_oracle"
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 echo "Somme des processeurs Oracle pour les serveurs AIX :" $(mysql -s -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL")
+
+# export des données
+export_to_xml
+
+# femeture de la feuille de calcul
+close_xml_sheet
+

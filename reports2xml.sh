@@ -91,7 +91,8 @@ select concat('Nombre de serveurs traités : ', count(*)) from $tCPU;
 select '----------------------------------' from dual;
 select 'Répartition des serveurs par OS   : ' from dual;
 
-select concat(count(*), ' serveur(s) avec OS : ', left(os, 9)) from $tCPU group by left(os, 9);
+-- select concat(count(*), ' serveur(s) avec OS : ', left(os, 9)) from $tCPU group by left(os, 9);
+select concat(count(*), ' serveur(s) avec OS : ', os) from $tCPU group by os;
 
 select '----------------------------------' from dual;
 select concat('Nombre de base de données  : ', count(*)) from $tVersion;
@@ -102,6 +103,11 @@ select concat('Personal Edition   : ', count(*)) from $tVersion where banner lik
 select concat('Express Edition    : ', count(*)) from $tVersion where banner like '%Oracle%' and banner like '%Express%' ;
 select concat('Standard Edition   : ', count(*)) from $tVersion where banner like '%Oracle%' and banner not like '%Enterprise%' and banner not like '%Personal%' and banner not like '%Express%' ;
 select concat('Enterprise Edition : ', count(*)) from $tVersion where banner like '%Oracle%' and banner like '%Enterprise%' ;
+select '----------------------------------' from dual;
+
+select 'Les bases par version : ' from dual;
+select concat(rpad(count(*),5,' '), 'base(s) en : ', banner) from $tVersion group by banner order by banner desc;
+-- select count(*), banner from $tVersion group by banner order by 2 desc;
 select '----------------------------------' from dual;
 "
 mysql -ss -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
@@ -127,8 +133,7 @@ export SQL="SELECT distinct Host_Name FROM $tVersion where Host_Name not in (sel
 
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
-# insertion des données de la requête dans le fichier XML
-# fonction : "Nom de la feuille (sans espace)" "fichier CSV" "fichier XML"
+# export des données 
 export_to_xml 
 # fermeture de la feuille
 close_xml_sheet
@@ -402,7 +407,8 @@ export DIAG_PACK_FEATURES=$DIAG_PACK_FEATURES",'Diagnostic Pack','EM Performance
 
 reports_diagnostics.sh $PROJECT_NAME
 
-exit
+
+# exit
 
 :<<COMM
 export FROM="$tCPU c, $tDB d"
@@ -527,7 +533,7 @@ export WHERE="name in $ADVANCED_SEC_FEATURES"
 export SHEET_NAME=Proc_AdvSec_AIX
 print_proc_oracle_aix $SELECT_EE_AIX'|'$FROM'|'$WHERE
 
-
+# fermeture du fichier XML
 print_xml_footer $XML_FILE
 
 echo "-------------------------------------------------------------------------------"

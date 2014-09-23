@@ -70,6 +70,7 @@ TABLE=$1"_version"
 HEADER="AUDIT_ID,BANNER,HOST_NAME,INSTANCE_NAME,SYSDATE"
 fnCreateTable $TABLE $HEADER
 
+
 # ajout de la clé sur la table version : host + instance
 KEY=HOST_NAME,INSTANCE_NAME
 fnAddPrimaryKey $TABLE $KEY

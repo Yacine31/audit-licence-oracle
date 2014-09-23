@@ -31,6 +31,12 @@ order by c.physical_server, s.host_name, s.instance_name;
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
+export SHEET_NAME=Part
+# ouverture d'une feuille Excel
+open_xml_sheet
+# export des données
+export_to_xml
+
 #--- tableau pour le calcul des processeurs, serveurs non AIX
 
 #--------- Calcul des processeurs : OS != AIX
@@ -108,8 +114,6 @@ export SQL="select sum(Proc_Oracle_Calcules) from proc_oracle"
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 echo "Somme des processeurs Oracle pour les serveurs AIX :" $(mysql -s -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL")
-
-exit
 
 # export des données
 export_to_xml

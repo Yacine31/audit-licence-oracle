@@ -103,7 +103,7 @@ function get_os {
 	fi
 	
 	# quelque soit l'OS on prend juste le premier mot (Microsoft souvent suivi de plusieurs informations
-	OS=$(echo $OS | cut -d' ' -f1)
+	# OS=$(echo $OS | cut -d' ' -f1)
 
 }
 

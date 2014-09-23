@@ -130,7 +130,13 @@ function fnVersion {
 
 	mysql -uroot -proot --local-infile --database=$DB -e "
 	load data local infile '$TMPFILE' into table $TABLE fields terminated by '$DELIM' ;"
-	# rm -f $TMPFILE
+	rm -f $TMPFILE
+	# mise à jour de la table version pour supprimer tout ce qui est derrière le '-' dans la colonne BANNER
+	SQL="update $TABLE set banner=substring_index(banner,'-',1)";
+	echo $SQL
+	mysql -uroot -proot --local-infile --database=$DB -e "$SQL"
+
+
 }
 
 function fnOlap {

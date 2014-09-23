@@ -29,6 +29,13 @@ order by c.physical_server, d.host_name, d.instance_name, d.name"
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
+export SHEET_NAME=Tuning
+# ouverture d'une feuille Excel
+open_xml_sheet
+# export des données
+export_to_xml
+
+
 echo "Liste des bases qui utilisent TUNING PACK et qui sont en Enterprise Edition"
 
 export SQL="select c.physical_server, d.host_name, d.instance_name, d.name, d.version, 
@@ -41,6 +48,8 @@ order by c.physical_server, d.host_name, d.instance_name, d.name"
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
+# export des données
+export_to_xml
 #--------- Calcul des processeurs : OS != AIX
 
 echo "Calcul des processeurs Oracle par serveur physique (OS!=AIX) :"
@@ -57,6 +66,8 @@ order by c.physical_server"
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
+# export des données
+export_to_xml
 #--------- Calcul des processeurs : OS == AIX
 
 echo "Calcul des processeurs Oracle par serveur physique (OS=AIX) :"
@@ -116,8 +127,16 @@ select * from proc_oracle;"
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
+# export des données
+export_to_xml
+
 export SQL="select sum(Proc_Oracle_Calcules) from proc_oracle"
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 echo "Somme des processeurs Oracle pour les serveurs AIX :" $(mysql -s -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL")
+
+# export des données
+export_to_xml
+# fermeture de la feuille
+close_xml_sheet
 
