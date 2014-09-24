@@ -24,7 +24,7 @@ exit
 # echo "Calcul des processeurs Oracle par serveur physique :"
 echo "WHERE=$WHERE"
 
-mysql -uroot -proot --local-infile --database=$DB -e "
+mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
 drop table if exists $tCPUAIX;
 create table $tCPUAIX as
 

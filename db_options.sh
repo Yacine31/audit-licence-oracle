@@ -9,8 +9,12 @@ HISTORIQUE
 [ "$1" = "" ] && echo "Syntax: $0 PROJECT_NAME" && exit 1
 
 # variables globales
-DB="test"
 DELIM=","
+
+# Inclusion des fonctions
+REP_COURANT="/home/merlin/lms_scripts"
+. ${REP_COURANT}/fonctions.sh
+
 
 function fnSqlProfiles {
 	# recherche dans les fichiers options.csv des lignes qui commencent parGREPME et contiennent SQL_PROFILES
@@ -35,7 +39,7 @@ function fnSqlProfiles {
 	done
 	echo ""
 
-	mysql -uroot -proot --local-infile --database=$DB -e "
+	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
 	load data local infile '$TMPFILE' into table $TABLE fields terminated by '$DELIM';"
 	# rm -f $TMPFILE
 
@@ -59,7 +63,7 @@ function fnRAC {
 	done
 	echo ""
 
-	mysql -uroot -proot --local-infile --database=$DB -e "
+	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
 	load data local infile '$TMPFILE' into table $TABLE fields terminated by '$DELIM';"
 	# rm -f $TMPFILE
 }
@@ -81,7 +85,7 @@ function fnPart {
 	done
 	echo ""
 
-	mysql -uroot -proot --local-infile --database=$DB -e "
+	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
 	load data local infile '$TMPFILE' into table $TABLE fields terminated by '$DELIM';"
 	# rm -f $TMPFILE
 }
@@ -107,7 +111,7 @@ function fnAdminPack {
 	done
 	echo ""
 
-	mysql -uroot -proot --local-infile --database=$DB -e "
+	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
 	load data local infile '$TMPFILE' into table $TABLE fields terminated by '$DELIM' ;"
 	# rm -f $TMPFILE
 }
@@ -128,13 +132,12 @@ function fnVersion {
 	done
 	echo ""
 
-	mysql -uroot -proot --local-infile --database=$DB -e "
+	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
 	load data local infile '$TMPFILE' into table $TABLE fields terminated by '$DELIM' ;"
 	rm -f $TMPFILE
 	# mise à jour de la table version pour supprimer tout ce qui est derrière le '-' dans la colonne BANNER
 	SQL="update $TABLE set banner=substring_index(banner,'-',1)";
-	echo $SQL
-	mysql -uroot -proot --local-infile --database=$DB -e "$SQL"
+	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
 
 }
@@ -155,7 +158,7 @@ function fnOlap {
 	done
 	echo ""
 
-	mysql -uroot -proot --local-infile --database=$DB -e "
+	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
 	load data local infile '$TMPFILE' into table $TABLE fields terminated by '$DELIM' ;"
 	# rm -f $TMPFILE
 }
@@ -176,7 +179,7 @@ function fnSpatial {
 	done
 	echo ""
 
-	mysql -uroot -proot --local-infile --database=$DB -e "
+	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
 	load data local infile '$TMPFILE' into table $TABLE fields terminated by '$DELIM' ;"
 	# rm -f $TMPFILE
 }
@@ -196,7 +199,7 @@ function fnvoption {
 	done
 	echo ""
 
-	mysql -uroot -proot --local-infile --database=$DB -e "
+	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
 	load data local infile '$TMPFILE' into table $TABLE fields terminated by '$DELIM' ;"
 	# rm -f $TMPFILE
 }
@@ -217,12 +220,34 @@ function fnRegistry {
 	done
 	echo ""
 
-	mysql -uroot -proot --local-infile --database=$DB -e "
+	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
 	load data local infile '$TMPFILE' into table $TABLE fields terminated by '$DELIM' ;"
 	# rm -f $TMPFILE
 }
 
 
+function fnDataMining {
+	# insertion des données data mining
+	# les données proviennent des fichiers options.csv 
+	SRCFILE="*options.csv"
+	TABLE=$1"_data_mining"
+	TMPFILE="/tmp/data_mining"
+
+	echo -n "Insertion des données data_mining depuis les fichiers XXX_YYY_options.csv vers la table $TABLE : "
+	rm -f $TMPFILE 2>/dev/null
+	find -type f -iname $SRCFILE | while read f
+	do 
+		echo -n "."
+		cat "$f" | grep '^GREPME' | grep ',DATA_MINING,'  >> $TMPFILE
+	done
+	echo ""
+
+	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
+	load data local infile '$TMPFILE' into table $TABLE fields terminated by '$DELIM' ;"
+	# rm -f $TMPFILE
+}
+
+fnDataMining $1
 fnvoption $1
 fnPart $1
 fnAdminPack $1

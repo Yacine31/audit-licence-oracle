@@ -7,11 +7,15 @@ HISTORIQUE
 Le script est appelé une fois pour créer les différentes tables dans la BDD
 USAGE
 
+# Inclusion des fonctions
+REP_COURANT="/home/merlin/lms_scripts"
+. ${REP_COURANT}/fonctions.sh
+
+
 # si aucun paramètre en entrée on quitte
 [ "$1" = "" ] && echo "Syntax: $0 PROJECT_NAME" && exit 1
 
 # variables globales
-DB="test"
 DELIM=","
 
 function fnCreateTable {
@@ -23,7 +27,7 @@ function fnCreateTable {
 	FIELDS=$(echo $HEADER | sed -e 's/'$DELIM'/` varchar(255),\n`/g' -e 's/\r//g')
 	FIELDS='`'"$FIELDS"'` varchar(255)'
 	echo -n "Création de la table $TABLE .... "
-	mysql -uroot -proot --local-infile --database=$DB -e "
+	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
 	DROP TABLE IF EXISTS $TABLE;
 	CREATE TABLE $TABLE ($FIELDS);"
 	echo " terminée"
@@ -36,7 +40,7 @@ function fnAddPrimaryKey {
 	
 	# TODO : ajouter la vérification des paramètres 
 	echo -n "Ajout de la clé primaire ($KEY) à la table $TABLE ... "
-	mysql -uroot -proot --local-infile --database=$DB -e "
+	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
 	ALTER TABLE $TABLE ADD PRIMARY KEY ($KEY);"
 	echo " terminé"
 
@@ -93,10 +97,6 @@ fnCreateTable $TABLE $HEADER
 KEY=HOST_NAME,INSTANCE_NAME
 fnAddPrimaryKey $TABLE $KEY
 
-#mysql -uroot -proot --local-infile --database=$DB -e "
-#ALTER TABLE ${1}_db ADD PRIMARY KEY (Host_Name, Instance_Name);"
-#echo "Création de la clé primaire ... OK"
-
 # creation de la table pour les données serveurs
 TABLE=$1"_cpu"
 HEADER="PHYSICAL_SERVER,Host_Name,OS,Marque,Model,Virtuel,Processor_Type,Socket,Cores_per_Socket,Total_Cores,"
@@ -147,4 +147,13 @@ HEADER="GREPME,Host_Name,Instance_Name,Sysdate,Host_name_2,Instance_Name_2,DBA_R
 fnCreateTable $TABLE $HEADER
 # ajout de la clé primaire sur cette table 
 KEY=HOST_NAME,INSTANCE_NAME,COMP_NAME,VERSION
+fnAddPrimaryKey $TABLE $KEY
+
+# creation de la table pour les données DATA MINING
+TABLE=$1"_data_mining"
+HEADER="GREPME,Host_Name,Instance_Name,Sysdate,Host_name_2,Instance_Name_2,Data_Mining,Metadata,Count_Nbr,Count_Txt,Owner,Model_Name,"
+HEADER=$HEADER"MINING_FUNCTION,ALGORITHM,CREATION_DATE,BUILD_DURATION,MODEL_SIZE"
+fnCreateTable $TABLE $HEADER
+# ajout de la clé primaire sur cette table 
+KEY=HOST_NAME,INSTANCE_NAME,Owner,Model_Name
 fnAddPrimaryKey $TABLE $KEY

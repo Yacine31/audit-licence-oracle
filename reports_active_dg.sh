@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Inclusion des fonctions
-# REP_COURANT="/home/merlin/lms_scripts"
+REP_COURANT="/home/merlin/lms_scripts"
 . ${REP_COURANT}/fonctions.sh
 . ${REP_COURANT}/fonctions_xml.sh
 
@@ -20,7 +20,7 @@ export SQL="select c.physical_server, d.host_name, d.instance_name, d.name, d.ve
 d.detected_usages, d.last_usage_date, banner
 from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
 where d.host_name=v.host_name and d.instance_name=v.instance_name
-and name in ($ACTIVE_DG_FEATURES)
+and name like $ACTIVE_DG_FEATURES
 and locate('Enterprise', banner) > 0
 order by c.physical_server, d.host_name, d.instance_name, d.name"
 
@@ -39,7 +39,7 @@ echo "Calcul des processeurs Oracle par serveur physique (OS!=AIX) :"
 export SQL="select distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, '' as Total_Cores, '' as Core_Factor, '' as Proc_Oracle
 from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
 where d.host_name=v.host_name and d.instance_name=v.instance_name
-and name in ($ACTIVE_DG_FEATURES)
+and name like $ACTIVE_DG_FEATURES
 and locate('Enterprise', banner) > 0
 and c.os not like '%AIX%'
 group by c.physical_server 
@@ -70,7 +70,7 @@ c.Core_Factor ,
 c.CPU_Oracle
 from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
 where d.host_name=v.host_name and d.instance_name=v.instance_name
-and name in ($ACTIVE_DG_FEATURES)
+and name like $ACTIVE_DG_FEATURES
 and locate('Enterprise', banner) > 0
 and c.os like '%AIX%'
 order by c.physical_server"
@@ -99,7 +99,7 @@ Partition_Type, Active_Physical_CPUs, Entitled_Capacity, Active_CPUs_in_Pool, On
 Core_Count, Core_Factor, CPU_Oracle
 from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
 where d.host_name=v.host_name and d.instance_name=v.instance_name
-and name in ($ACTIVE_DG_FEATURES)
+and name like $ACTIVE_DG_FEATURES
 and locate('Enterprise', banner) > 0
 and c.os like '%AIX%'
 order by physical_server) r

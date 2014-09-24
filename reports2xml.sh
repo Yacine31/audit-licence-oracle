@@ -37,6 +37,7 @@ export tSQLP=$PROJECT_NAME"_sqlprofiles"	# table avec les données SQL PROFILES
 export tOLAP=$PROJECT_NAME"_olap"    # table avec les données OLAP
 export tSpatial=$PROJECT_NAME"_spatial"    # table avec les données SPATIAL/LOCATOR
 export tVoption=$PROJECT_NAME"_v_option"    # table avec les paramètres v_option
+export tDataMining=$PROJECT_NAME"_data_mining"    # table avec les paramètres v_option
 
 
 #--------------------------------------------------------------------------------#
@@ -93,7 +94,7 @@ select '----------------------------------' from dual;
 select 'Répartition des serveurs par OS   : ' from dual;
 
 -- select concat(count(*), ' serveur(s) avec OS : ', left(os, 9)) from $tCPU group by left(os, 9);
-select concat(count(*), ' serveur(s) avec OS : ', os) from $tCPU group by os;
+select concat(rpad(count(*),5,' '), ' serveur(s) avec OS : ', os) from $tCPU group by os;
 
 select '----------------------------------' from dual;
 select concat('Nombre de base de données  : ', count(*)) from $tVersion;
@@ -284,45 +285,9 @@ reports_olap.sh $PROJECT_NAME
 #--------------------------------------------------------------------------------#
 # Option Datamining
 #--------------------------------------------------------------------------------#
-echo "
-#--------------------------------------------------------------------------------#
-# Option Datamining
-#--------------------------------------------------------------------------------#
-"
-:<<DMCOM
-echo "Liste des serveurs avec option DATAMINING en Enterprise Edition"
 
-export FROM="$tCPU c left join $tDB d on c.Host_Name=d.Host_Name"
-export WHERE="d.DB_Edition='Enterprise' and c.os not like '%AIX%' and d.v_opt_dm!=''"
-export ORDERBY="PHYSICAL_SERVER, c.Host_Name, c.os"
+reports_data_mining.sh
 
-export SQL="select $SELECT_EE_NON_AIX FROM $FROM where $WHERE order by $ORDERBY;"
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
-
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
-# insertion des données de la requête dans le fichier XML
-export SHEET_NAME=DataMining
-export_to_xml
-
-export WHERE="d.DB_Edition='Enterprise' and c.os='AIX' and d.v_opt_dm!=''"
-
-export SQL="select $SELECT_EE_AIX FROM $FROM where $WHERE order by $ORDERBY ;"
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
-
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
-# insertion des données de la requête dans le fichier XML
-export SHEET_NAME=DataMining_AIX
-export_to_xml
-
-# Option OLAP : calcul des processeurs
-export WHERE="d.DB_Edition='Enterprise' and c.os='AIX' and d.v_opt_dm!=''"
-export FROM="$tDB d left join $tCPU c on d.HOST_NAME=c.Host_Name"
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
-
-export SHEET_NAME=Proc_DM_AIX
-print_proc_oracle_aix $SELECT_EE_AIX'|'$FROM'|'$WHERE
-
-DMCOM
 
 #-------------------------------------------------------------------------------
 # Option Spatial/Locator
@@ -383,7 +348,7 @@ reports_adv_security.sh $PROJECT_NAME
 # Real Application Testing
 #-------------------------------------------------------------------------------
 
-export RAT_FEATURES="'Database Replay%','SQL Performance Analyzer'"
+export RAT_FEATURES="'Database Replay: Workload Capture','Database Replay: Workload Capture','SQL Performance Analyzer'"
 
 reports_rat.sh $PROJECT_NAME
 

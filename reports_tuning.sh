@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Inclusion des fonctions
-# REP_COURANT="/home/merlin/lms_scripts"
+REP_COURANT="/home/merlin/lms_scripts"
 . ${REP_COURANT}/fonctions.sh
 . ${REP_COURANT}/fonctions_xml.sh
 

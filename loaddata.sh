@@ -3,7 +3,10 @@
 # 23/05/2014 : première version
 
 # MYSQL_ARGS="--defaults-file=/etc/mysql/debian.cnf"
-DB="test"
+# Inclusion des fonctions
+REP_COURANT="/home/merlin/lms_scripts"
+. ${REP_COURANT}/fonctions.sh
+
 DELIM=";"
 
 CSV="$1"
@@ -12,7 +15,7 @@ TABLE="$2"
 [ "$CSV" = "" -o "$TABLE" = "" ] && echo "Syntax: $0 csvfile tablename" && exit 1
 
 # mysql $MYSQL_ARGS $DB -e "
-mysql -uroot -proot --local-infile --database=test -e "
+mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
 LOAD DATA LOCAL INFILE '$(pwd)/$CSV' INTO TABLE $TABLE
 FIELDS TERMINATED BY '$DELIM'
 IGNORE 1 LINES

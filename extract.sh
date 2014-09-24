@@ -40,13 +40,6 @@ $SCRIPTS_DIR/lms_cpu.sh $CPU_CSV
 echo "import des données serveurs dans MySQL ..."
 $SCRIPTS_DIR/loaddata.sh $CPU_CSV $CPU_TABLE 2>/dev/null
 
-# appeler le script de consolidation des données reviewlite
-# $SCRIPTS_DIR/lms_db.sh $DB_CSV 2>/dev/null
-
-# intégrer les données à la base mysql
-# echo "import des données database dans MySQL ..."
-# $SCRIPTS_DIR/loaddata.sh $DB_CSV $DB_TABLE 2>/dev/null
-
 # générer les options de la base et les packs d'admin 
 $SCRIPTS_DIR/db_options.sh $PROJECT_NAME
 
