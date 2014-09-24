@@ -366,7 +366,7 @@ reports_diagnostics.sh $PROJECT_NAME
 #	- SecureFile Deduplication (user)
 #	- SecureFile Compression (user)
 #-------------------------------------------------------------------------------
-export ADV_COMP_FEATURES="'SecureFiles (user)','SecureFile Deduplication (user)','SecureFile Compression (user)'"
+export ADV_COMP_FEATURES="'SecureFiles (user)','SecureFile Deduplication (user)','SecureFile Compression (user)','Backup BZIP2 Compression'"
 
 reports_adv_compression.sh $PROJECT_NAME
 

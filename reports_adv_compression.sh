@@ -12,6 +12,7 @@
 #       - SecureFiles (user)
 #       - SecureFile Deduplication (user)
 #       - SecureFile Compression (user)
+#	- Backup BZIP2 Compression
 #-------------------------------------------------------------------------------
 echo "
 #-------------------------------------------------------------------------------
