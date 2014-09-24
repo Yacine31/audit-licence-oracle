@@ -35,7 +35,8 @@ export tCPUNONAIX=$PROJECT_NAME"_cpu_non_aix"	  # table pour le calcul des CPUs 
 export tRAC=$PROJECT_NAME"_rac"	# table avec les données RAC : nodes_count != 1
 export tSQLP=$PROJECT_NAME"_sqlprofiles"	# table avec les données SQL PROFILES
 export tOLAP=$PROJECT_NAME"_olap"    # table avec les données OLAP
-export tSpatial=$PROJECT_NAME"_spatial"    # table avec les données OLAP
+export tSpatial=$PROJECT_NAME"_spatial"    # table avec les données SPATIAL/LOCATOR
+export tVoption=$PROJECT_NAME"_v_option"    # table avec les paramètres v_option
 
 
 #--------------------------------------------------------------------------------#
@@ -333,64 +334,17 @@ reports_spatial.sh $PROJECT_NAME
 # Option Active Data Guard
 #-------------------------------------------------------------------------------
 
-:<<ADGCOM
-echo "
-#-------------------------------------------------------------------------------
-# Option Active Data Guard
-#-------------------------------------------------------------------------------
-"
-echo "Liste des serveurs avec option Active Data Guard en Enterprise Edition"
+export ACTIVE_DG_FEATURES="'%Active Data Guard%'"
 
-export SQL="select $SELECT_EE_NON_AIX
-FROM $tDbaFeatures d left join $tCPU c on c.Host_Name=d.Host_Name 
-where 
--- d.DB_Edition='Enterprise' and 
-(c.os not like '%AIX%' or c.os is null)
-and d.name like 'Active Data Guard%'
-order by $ORDERBY
-;
-"
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
-
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
-# insertion des données de la requête dans le fichier XML
-export SHEET_NAME=ActiveDG
-export_to_xml
-
-export SQL="select $SELECT_EE_AIX, d.version
-FROM $tDbaFeatures d left join $tCPU c on c.Host_Name=d.Host_Name 
-where 
--- d.DB_Edition='Enterprise' and 
-(c.os like '%AIX%' or c.os is null) 
-and d.name like 'Active Data Guard%'
-order by $ORDERBY
-;
-"
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
-
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
-# insertion des données de la requête dans le fichier XML
-export SHEET_NAME=ActiveDG_AIX
-export_to_xml
-
-
-# Option Active Data Guard : calcul des processeurs
-export FROM="$tDbaFeatures d left join $tCPU c on d.HOST_NAME=c.Host_Name"
-export WHERE="name like '%Active Data Guard%'"
-
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
-
-export SHEET_NAME=Proc_ADG_AIX
-print_proc_oracle_aix $SELECT_EE_AIX'|'$FROM'|'$WHERE
-
-ADGCOM
+reports_active_dg.sh $PROJECT_NAME
 
 #-------------------------------------------------------------------------------
 # Option Tuning Pack
 #-------------------------------------------------------------------------------
 
 export TUNING_PACK_FEATURES="'SQL Access Advisor','SQL Monitoring and Tuning pages','SQL Performance Analyzer','SQL Profile'"
-export TUNING_PACK_FEATURES=$TUNING_PACK_FEATURES",'SQL Tuning Advisor','SQL Tuning Set','SQL Tuning Set (user)'"
+export TUNING_PACK_FEATURES=$TUNING_PACK_FEATURES",'SQL Tuning Advisor','SQL Tuning Set','SQL Tuning Set (user)','Tuning Pack'"
+export TUNING_PACK_FEATURES=$TUNING_PACK_FEATURES",'Real-Time SQL Monitoring'"
 
 reports_tuning.sh $PROJECT_NAME
 
@@ -401,137 +355,39 @@ reports_tuning.sh $PROJECT_NAME
 #-------------------------------------------------------------------------------
 
 export DIAG_PACK_FEATURES="'ADDM','Automatic Database Diagnostic Monitor'"
-#,'Automatic Maintenance - SQL Tuning Advisor'"
 export DIAG_PACK_FEATURES=$DIAG_PACK_FEATURES",'Automatic Workload Repository','AWR Baseline','AWR Report','Active Session History'"
-export DIAG_PACK_FEATURES=$DIAG_PACK_FEATURES",'Diagnostic Pack','EM Performance Page'"
+export DIAG_PACK_FEATURES=$DIAG_PACK_FEATURES",'Diagnostic Pack','EM Performance Page','Active Session History','EM Notification'"
 
 reports_diagnostics.sh $PROJECT_NAME
-
-
-# exit
-
-:<<COMM
-export FROM="$tCPU c, $tDB d"
-export WHERE="c.Host_Name=d.Host_Name and c.os not like '%AIX%' and d.Tuning_Pack_Used!='0' and d.Diag_Pack_Used='0'"
-export ORDREBY="d.db_edition, c.physical_server, c.host_name"
-
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
-$SELECT_EE_NON_AIX, d.db_edition
-FROM $FROM
-where $WHERE
-order by $ORDERBY
-;
-"
-
-export WHERE="c.Host_Name=d.Host_Name and c.os='AIX' and d.Tuning_Pack_Used!='0' and d.Diag_Pack_Used='0'"
-
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
-$SELECT_EE_AIX, d.db_edition
-FROM $FROM
-where $WHERE
-order by $ORDERBY
-;"
-COMM
-
-# Option Diagnostics Pack : calcul des processeurs
-export FROM="$tDbaFeatures d left join $tCPU c on d.HOST_NAME=c.Host_Name"
-export WHERE="name in ($TUNING_PACK_FEATURES)"
-export WHERE=$WHERE" and name not in ($DIAG_PACK_FEATURES) and c.os!='AIX'"
-
-export SHEET_NAME=Proc_Diag2
-print_proc_oracle $SELECT_EE_NON_AIX'|'$FROM'|'$WHERE
-
-export WHERE=$WHERE" and name not in ($DIAG_PACK_FEATURES) and c.os='AIX'"
-
-export SHEET_NAME=Proc_Diag2_AIX
-print_proc_oracle_aix $SELECT_EE_AIX'|'$FROM'|'$WHERE
 
 #-------------------------------------------------------------------------------
 # l'option : Advanced Compression, les composants à vérfier
 # 	- SecureFiles (user) 
+#	- SecureFile Deduplication (user)
+#	- SecureFile Compression (user)
 #-------------------------------------------------------------------------------
-echo "
-#-------------------------------------------------------------------------------
-# l'option : Advanced Compression, les omposants à vérfier
-# 	- SecureFiles (user) 
-#-------------------------------------------------------------------------------
-"
-export OAC_FEATURES="('SecureFiles (user)')"
-export FROM="$tDbaFeatures d left join $tCPU c on d.HOST_NAME=c.Host_Name"
-export WHERE="name in $OAC_FEATURES  and c.os!='AIX'"
+export ADV_COMP_FEATURES="'SecureFiles (user)','SecureFile Deduplication (user)','SecureFile Compression (user)'"
 
-# Serveurs non AIX
-export SQL="select $SELECT_EE_NON_AIX FROM $FROM where $WHERE order by $ORDERBY ;"
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
-
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
-# insertion des données de la requête dans le fichier XML
-export SHEET_NAME=AdvComp
-export_to_xml
-
-export SHEET_NAME=Proc_AdvCom
-print_proc_oracle $SELECT_EE_NON_AIX'|'$FROM'|'$WHERE
-
-# Serveurs AIX
-export WHERE="name in $OAC_FEATURES  and c.os='AIX'"
-export SQL="select $SELECT_EE_AIX FROM $FROM where $WHERE order by $ORDERBY;"
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
-
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
-# insertion des données de la requête dans le fichier XML
-export SHEET_NAME=AdvCompAix
-export_to_xml
-
-export FROM="$tDbaFeatures d left join $tCPU c on d.HOST_NAME=c.Host_Name"
-export WHERE="name in $OAC_FEATURES"
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
-
-export SHEET_NAME=Proc_AdvCom_AIX
-print_proc_oracle_aix $SELECT_EE_AIX'|'$FROM'|'$WHERE
+reports_adv_compression.sh $PROJECT_NAME
 
 #-------------------------------------------------------------------------------
-# TDE : 
+# Advanced Security
 #-------------------------------------------------------------------------------
-echo "
+
+export ADV_SECURITY_FEATURES="'Transparent Data Encryption','Backup Encryption','SecureFile Encryption (user)'"
+
+reports_adv_security.sh $PROJECT_NAME
+
+
 #-------------------------------------------------------------------------------
-# TDE : 
+# Real Application Testing
 #-------------------------------------------------------------------------------
-"
-echo "----------------------------------------------------------------------------------"
-echo " Les serveurs qui utilisent des fonctionnalités du pack Oracle Advanced Security :"
-echo ""
 
-export ADVANCED_SEC_FEATURES="('Transparent Data Encryption')"
+export RAT_FEATURES="'Database Replay%','SQL Performance Analyzer'"
 
-export FROM="$tDbaFeatures d left join $tCPU c on d.HOST_NAME=c.Host_Name"
-export WHERE="name in $ADVANCED_SEC_FEATURES"
-# export ORDERBY="c.physical_server, c.host_name"
+reports_rat.sh $PROJECT_NAME
 
-export SQL="select $SELECT_EE_NON_AIX FROM $FROM where $WHERE order by $ORDERBY;"
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
-
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
-# insertion des données de la requête dans le fichier XML
-export SHEET_NAME=AdvSec
-export_to_xml
-
-# SErveurs AIX
-export SQL="select $SELECT_EE_AIX FROM $FROM where $WHERE order by $ORDERBY;"
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
-
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
-# insertion des données de la requête dans le fichier XML
-export SHEET_NAME=AdvSecAix
-export_to_xml
-
-# Option Diagnostics Pack : calcul des processeurs
-# print_proc_oracle_aix $WHERE
-export FROM="$tDbaFeatures d left join $tCPU c on d.HOST_NAME=c.Host_Name"
-export WHERE="name in $ADVANCED_SEC_FEATURES"
-
-
-export SHEET_NAME=Proc_AdvSec_AIX
-print_proc_oracle_aix $SELECT_EE_AIX'|'$FROM'|'$WHERE
+#-------------------------------------------------------------------------------
 
 # fermeture du fichier XML
 print_xml_footer $XML_FILE

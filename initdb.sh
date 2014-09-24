@@ -132,3 +132,19 @@ fnCreateTable $TABLE $HEADER
 KEY=HOST_NAME,INSTANCE_NAME,OWNER,NAME
 fnAddPrimaryKey $TABLE $KEY
 
+# creation de la table v_options
+TABLE=$1"_v_option"
+HEADER="AUDIT_ID,PARAMETER,VALUE,HOST_NAME,INSTANCE_NAME,SYSDATE"
+fnCreateTable $TABLE $HEADER
+# ajout de la clé primaire sur cette table 
+KEY=HOST_NAME,INSTANCE_NAME,PARAMETER
+fnAddPrimaryKey $TABLE $KEY
+
+
+# creation de la table pour les données registry
+TABLE=$1"_registry"
+HEADER="GREPME,Host_Name,Instance_Name,Sysdate,Host_name_2,Instance_Name_2,DBA_REGISTRY,Metadata,Count_Nbr,Count_Txt,COMP_NAME,VERSION,STATUS,MODIFIED,SCHEMA"
+fnCreateTable $TABLE $HEADER
+# ajout de la clé primaire sur cette table 
+KEY=HOST_NAME,INSTANCE_NAME,COMP_NAME,VERSION
+fnAddPrimaryKey $TABLE $KEY

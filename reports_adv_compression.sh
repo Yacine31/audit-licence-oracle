@@ -5,81 +5,77 @@
 . ${REP_COURANT}/fonctions.sh
 . ${REP_COURANT}/fonctions_xml.sh
 
-DEBUG=0
-
 #-------------------------------------------------------------------------------
-# Option Spatial/Locator
+# Option Advanced Compression
+#-------------------------------------------------------------------------------
+# l'option : Advanced Compression, les composants à vérfier
+#       - SecureFiles (user)
+#       - SecureFile Deduplication (user)
+#       - SecureFile Compression (user)
 #-------------------------------------------------------------------------------
 echo "
 #-------------------------------------------------------------------------------
-# Option Spatial/Locator
+# Option Advanced Compression
 #-------------------------------------------------------------------------------
 "
-echo "Liste des serveurs avec option SPATIAL/LOCATOR en Standard Edition"
-echo "Pour ces serveurs, vérifier si c'est SPATIAL est FALSE c'est donc LOCATOR qui est mis en oeuvre"
+echo "Liste des serveurs qui utilisent Advanced Compression" 
 
-export SQL="select distinct physical_server, s.host_name, s.instance_name, s.owner, banner, concat(o.parameter,' = ', o.value) as 'Spatial Installed'
-from $tVersion v, $tVoption o, $tSpatial s left join $tCPU c on s.host_name=c.host_name 
-where o.host_name=v.host_name and o.instance_name=v.instance_name
-and o.parameter='Spatial'
-and s.host_name=v.host_name and s.instance_name=v.instance_name
-and count_nbr not in ('0','-942') 
-and owner not in ('', 'SYS', 'SYSTEM')
+echo "Liste des bases qui utilisent Advanced  Compression et qui sont en Standard Edition"
+
+export SQL="select c.physical_server, d.host_name, d.instance_name, d.name, d.version, 
+d.detected_usages, d.last_usage_date, banner
+from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
+where d.host_name=v.host_name and d.instance_name=v.instance_name
+and name in ($ADV_COMP_FEATURES)
 and locate('Enterprise', banner) = 0
-order by physical_server, s.host_name, s.instance_name, s.owner"
+order by c.physical_server, d.host_name, d.instance_name, d.name"
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
-export SHEET_NAME=Spatial
+export SHEET_NAME=AdvComp
 # ouverture d'une feuille Excel
 open_xml_sheet
 # export des données
 export_to_xml
 
 
-echo "Liste des serveurs avec option SPATIAL/LOCATOR en Enterprise Edition"
+echo "Liste des bases qui utilisent Advanced Compression et qui sont en Enterprise Edition"
 
-export SQL="select distinct physical_server, s.host_name, s.instance_name, s.owner, banner, concat(o.parameter,' = ', o.value) as 'Spatial Installed'
-from $tVersion v, $tVoption o, $tSpatial s left join $tCPU c on s.host_name=c.host_name 
-where o.host_name=v.host_name and o.instance_name=v.instance_name
-and o.parameter='Spatial'
-and s.host_name=v.host_name and s.instance_name=v.instance_name
-and count_nbr not in ('0','-942') 
-and owner not in ('', 'SYS', 'SYSTEM')
+export SQL="select c.physical_server, d.host_name, d.instance_name, d.name, d.version, 
+d.detected_usages, d.last_usage_date, banner
+from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
+where d.host_name=v.host_name and d.instance_name=v.instance_name
+and name in ($ADV_COMP_FEATURES)
 and locate('Enterprise', banner) > 0
-order by physical_server, s.host_name, s.instance_name, s.owner"
+order by c.physical_server, d.host_name, d.instance_name, d.name"
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
-
 # export des données
 export_to_xml
 #--------- Calcul des processeurs : OS != AIX
 
 echo "Calcul des processeurs Oracle par serveur physique (OS!=AIX) :"
-export SQL="select distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket,
- '' as Total_Cores, '' as Core_Factor, '' as Proc_Oracle
-from $tVersion v, $tVoption o, $tSpatial s left join $tCPU c on s.host_name=c.host_name 
-where o.host_name=v.host_name and o.instance_name=v.instance_name
-and o.parameter='Spatial'
-and s.host_name=v.host_name and s.instance_name=v.instance_name
-and count_nbr not in ('0','-942') 
-and owner not in ('', 'SYS', 'SYSTEM')
+
+export SQL="select distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, '' as Total_Cores, '' as Core_Factor, '' as Proc_Oracle
+from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
+where d.host_name=v.host_name and d.instance_name=v.instance_name
+and name in ($ADV_COMP_FEATURES)
 and locate('Enterprise', banner) > 0
 and c.os not like '%AIX%'
-group by c.physical_server
-order by physical_server" 
+group by c.physical_server 
+order by c.physical_server"
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
 # export des données
 export_to_xml
-
 #--------- Calcul des processeurs : OS == AIX
 
-echo
+echo "Calcul des processeurs Oracle par serveur physique (OS=AIX) :"
+
 export SQL="select distinct 
 c.physical_server 'Physical Server',
 c.Host_Name 'Host Name',
@@ -94,15 +90,12 @@ c.Active_Physical_CPUs 'APC',
 c.Core_Count ,
 c.Core_Factor ,
 c.CPU_Oracle
-from $tVersion v, $tVoption o, $tSpatial s left join $tCPU c on s.host_name=c.host_name 
-where o.host_name=v.host_name and o.instance_name=v.instance_name
-and o.parameter='Spatial'
-and s.host_name=v.host_name and s.instance_name=v.instance_name
-and count_nbr not in ('0','-942') 
-and owner not in ('', 'SYS', 'SYSTEM')
+from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
+where d.host_name=v.host_name and d.instance_name=v.instance_name
+and name in ($ADV_COMP_FEATURES)
 and locate('Enterprise', banner) > 0
 and c.os like '%AIX%'
-order by physical_server" 
+order by c.physical_server"
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
@@ -110,7 +103,7 @@ mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$
 # export des données
 export_to_xml
 
-echo "Calcul des processeurs Oracle par serveur physique (OS=AIX) :"
+# calcul des processeurs par regroupement des serveurs physiques
 
 export SQL="
 drop table  if exists proc_oracle;
@@ -122,16 +115,13 @@ select
     r.Core_Factor,
     r.Active_Physical_CPUs,
     if (sum(r.CPU_Oracle)<r.Active_Physical_CPUs,sum(r.CPU_Oracle),r.Active_Physical_CPUs) 'Proc_Oracle_Calcules'
-from
-(select distinct physical_server, s.host_name, Partition_Mode,
+from (
+select distinct physical_server, d.host_name, Partition_Mode,
 Partition_Type, Active_Physical_CPUs, Entitled_Capacity, Active_CPUs_in_Pool, Online_Virtual_CPUs, Processor_Type,
 Core_Count, Core_Factor, CPU_Oracle
-from $tVersion v, $tVoption o, $tSpatial s left join $tCPU c on s.host_name=c.host_name 
-where o.host_name=v.host_name and o.instance_name=v.instance_name
-and o.parameter='Spatial'
-and s.host_name=v.host_name and s.instance_name=v.instance_name
-and count_nbr not in ('0','-942') 
-and owner not in ('', 'SYS', 'SYSTEM')
+from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
+where d.host_name=v.host_name and d.instance_name=v.instance_name
+and name in ($ADV_COMP_FEATURES)
 and locate('Enterprise', banner) > 0
 and c.os like '%AIX%'
 order by physical_server) r
@@ -139,13 +129,11 @@ group by physical_server;
 
 select * from proc_oracle;"
 
+if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
+
 # export des données
 export_to_xml
-
-
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
-
 export SQL="select sum(Proc_Oracle_Calcules) from proc_oracle"
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
@@ -153,7 +141,7 @@ echo "Somme des processeurs Oracle pour les serveurs AIX :" $(mysql -s -u${MYSQL
 
 # export des données
 export_to_xml
-
-# femeture de la feuille de calcul
+# fermeture de la feuille
 close_xml_sheet
+
 

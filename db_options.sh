@@ -181,6 +181,49 @@ function fnSpatial {
 	# rm -f $TMPFILE
 }
 
+function fnvoption {
+	# insertion des données des fichiers v_option.csv
+	SRCFILE="*v_option.csv"
+	TABLE=$1"_v_option"
+	TMPFILE="/tmp/v_option.csv"
+
+	echo -n "Insertion des données des fichiers XXX_YYY_v_option.csv dans la table $TABLE : "
+	rm -f $TMPFILE 2>/dev/null
+	find -type f -iname $SRCFILE | while read f
+	do 
+		echo -n "."
+		cat "$f" | grep '^0,'  >> $TMPFILE
+	done
+	echo ""
+
+	mysql -uroot -proot --local-infile --database=$DB -e "
+	load data local infile '$TMPFILE' into table $TABLE fields terminated by '$DELIM' ;"
+	# rm -f $TMPFILE
+}
+
+function fnRegistry {
+	# insertion des données sur les composants de la vue dba_registry
+	# les données proviennent des fichiers options.csv 
+	SRCFILE="*options.csv"
+	TABLE=$1"_registry"
+	TMPFILE="/tmp/registry"
+
+	echo -n "Insertion des données de la vue dba_registry les fichiers XXX_YYY_options.csv vers la table $TABLE : "
+	rm -f $TMPFILE 2>/dev/null
+	find -type f -iname $SRCFILE | while read f
+	do 
+		echo -n "."
+		cat "$f" | grep '^GREPME' | grep ',DBA_REGISTRY,'  >> $TMPFILE
+	done
+	echo ""
+
+	mysql -uroot -proot --local-infile --database=$DB -e "
+	load data local infile '$TMPFILE' into table $TABLE fields terminated by '$DELIM' ;"
+	# rm -f $TMPFILE
+}
+
+
+fnvoption $1
 fnPart $1
 fnAdminPack $1
 fnVersion $1
@@ -188,3 +231,4 @@ fnRAC $1
 fnSqlProfiles $1
 fnOlap $1
 fnSpatial $1
+fnRegistry $1
