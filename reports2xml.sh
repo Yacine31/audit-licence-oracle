@@ -80,6 +80,7 @@ export tCPU=${tCPU}_tmp
 export DATE_JOUR=`date +%Y%m%d-%H%M%S`
 export TMP_FILE=${PROJECT_NAME}.tmp
 export XML_FILE=${PROJECT_NAME}_${DATE_JOUR}.xml
+export TXT_FILE=${PROJECT_NAME}_${DATE_JOUR}.txt
 
 # insertion du header du fichier xml :
 print_xml_header $XML_FILE
@@ -112,7 +113,7 @@ select concat(rpad(count(*),5,' '), 'base(s) en : ', banner) from $tVersion grou
 -- select count(*), banner from $tVersion group by banner order by 2 desc;
 select '----------------------------------' from dual;
 "
-mysql -ss -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
+mysql -ss -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
 
 # ouverture d'une feuille Excel
 export SHEET_NAME=Infos
@@ -125,7 +126,7 @@ export SQL="select Host_Name, os, Marque, Model, Processor_Type
 from $tCPU where host_name not in (SELECT Host_Name FROM $tVersion)
 order by Host_Name;
 "
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
+mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
 
 # export des données 
 export_to_xml 
@@ -133,7 +134,7 @@ export_to_xml
 echo "Les serveur sans le résultat de lms_cpuq.sh"
 export SQL="SELECT distinct Host_Name FROM $tVersion where Host_Name not in (select Host_Name from $tCPU) order by Host_Name;"
 
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
+mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
 
 # export des données 
 export_to_xml 
@@ -164,7 +165,8 @@ SQL="SELECT $SELECT from $FROM where $WHERE order by $ORDERBY ;"
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
+mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
+
 
 #--------- insertion des données de la requête dans le fichier XML
 export SHEET_NAME=SE
@@ -189,7 +191,9 @@ SQL="SELECT $SELECT from $FROM where $WHERE group by $GROUPBY order by $ORDERBY 
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
+mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
+
+B
 
 #--------- insertion des données de la requête dans le fichier XML
 # feuille déjà ouverte on ajoute le tableau de calcul des sockets
@@ -217,7 +221,8 @@ export SQL="select $SELECT_EE from $FROM where $WHERE order by $ORDERBY;"
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
+mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
+
 
 #--------- insertion des données de la requête dans le fichier XML
 export SHEET_NAME=EE
@@ -247,7 +252,8 @@ export SQL="select $SELECT_EE_AIX from $FROM where $WHERE order by $ORDERBY ;"
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
+mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
+
 
 # export des données
 export_to_xml
@@ -358,6 +364,7 @@ reports_rat.sh $PROJECT_NAME
 print_xml_footer $XML_FILE
 
 echo "-------------------------------------------------------------------------------"
+echo "Fichier texte : $(pwd)/$TXT_FILE"
 echo "Fichier à ouvrir dans Excel : $(pwd)/$XML_FILE"
 echo "-------------------------------------------------------------------------------"
 
