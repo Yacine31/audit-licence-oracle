@@ -193,8 +193,6 @@ if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
 
-B
-
 #--------- insertion des données de la requête dans le fichier XML
 # feuille déjà ouverte on ajoute le tableau de calcul des sockets
 export_to_xml
