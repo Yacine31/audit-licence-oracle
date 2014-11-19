@@ -33,7 +33,7 @@ c.Processor_Type"
 
 export FROM="$tCPU c left join $tRAC r left join $tVersion v on r.node_name=v.host_name on c.host_name=r.node_name"
 export WHERE="r.nodes_count > 1"
-export ORDERBY="r.database_name, r.rac_instance, r.node_name, c.physical_server"
+export ORDERBY="c.physical_server, r.database_name, r.node_name, r.rac_instance"
 
 export SQL="select $SELECT from $FROM where $WHERE order by $ORDERBY;"
 
@@ -92,7 +92,8 @@ c.CPU_Oracle"
 
 export FROM="$tCPU c left join $tRAC r left join $tVersion v on r.node_name=v.host_name on c.host_name=r.node_name"
 export WHERE="r.nodes_count > 1 and c.os like '%AIX%'"
-export ORDERBY="r.database_name, r.rac_instance, r.node_name, c.physical_server"
+export ORDERBY="c.physical_server, r.database_name, r.node_name, r.rac_instance"
+# export ORDERBY="r.database_name, r.rac_instance, r.node_name, c.physical_server"
 
 export SQL="select $SELECT from $FROM where $WHERE order by $ORDERBY;"
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
