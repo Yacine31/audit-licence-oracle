@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 
 # Inclusion des fonctions
 REP_COURANT="/home/merlin/lms_scripts"
@@ -19,19 +19,21 @@ DEBUG=0
 #--- tous les serveurs et tous les OS :
 echo "Les serveurs avec option RAC en Enterprise Edition"
 
-export SELECT="distinct 
+export SELECT="distinct
 c.physical_server 'Physical Server',
 r.node_name 'Node name',
 r.database_name 'Database Name',
 r.rac_instance 'Instance Name',
-if(locate('Enterprise', banner)>0, 'Enterprise', 'Standard') Edition,
-r.node_id 'Node ID', 
+r.nodes_count 'Nodes Count',
+r.node_id 'Node ID',
+if(locate('Enterprise', banner)>0, 'Enterprise', if(locate('Standard', banner)>0,'Standard','ND')) Edition ,
 c.Model,
 c.OS,
 c.Processor_Type"
-export FROM="$tVersion v, $tRAC r left join $tCPU c on r.node_name=c.host_name"
-export WHERE="r.node_name=v.host_name and r.nodes_count > 1 and locate('Enterprise', banner)>0"
-export ORDERBY="c.physical_server, r.database_name, r.instance_name, r.node_name"
+
+export FROM="$tCPU c left join $tRAC r left join $tVersion v on r.node_name=v.host_name on c.host_name=r.node_name"
+export WHERE="r.nodes_count > 1"
+export ORDERBY="r.database_name, r.rac_instance, r.node_name, c.physical_server"
 
 export SQL="select $SELECT from $FROM where $WHERE order by $ORDERBY;"
 
@@ -40,13 +42,14 @@ if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
 export SHEET_NAME=RAC
+
 # ouverture d'une feuille Excel
 open_xml_sheet
 # export des données
 export_to_xml
 
 # insertion des données de la requête dans le fichier XML
-export WHERE="r.node_name=v.host_name and r.nodes_count > 1 and locate('Enterprise', banner)>0 and c.os not like '%AIX%'"
+export WHERE="r.nodes_count > 1 and c.os not like '%AIX%'"
 export SQL="select $SELECT from $FROM where $WHERE order by $ORDERBY;"
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
@@ -56,8 +59,8 @@ export_to_xml
 
 #--------- Calcul des processeurs : OS != AIX
 export SELECT_NON_AIX="distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, '' as Total_Cores, '' as Core_Factor, '' as Proc_Oracle"
-export FROM="$tVersion v, $tRAC r left join $tCPU c on r.node_name=c.host_name"
-export WHERE="r.node_name=v.host_name and r.nodes_count > 1 and locate('Enterprise', banner)>0 and c.os not like '%AIX%'"
+export FROM="$tCPU c left join $tRAC r left join $tVersion v on r.node_name=v.host_name on c.host_name=r.node_name"
+export WHERE="r.nodes_count > 1 and c.os not like '%AIX%'"
 export ORDERBY="c.physical_server"
 
 # affichage du tableau pour le calcul du nombre de processeur
@@ -87,9 +90,9 @@ c.Core_Count ,
 c.Core_Factor ,
 c.CPU_Oracle"
 
-export FROM="$tVersion v, $tRAC r left join $tCPU c on r.node_name=c.host_name"
-export WHERE="r.node_name=v.host_name and r.nodes_count > 1 and locate('Enterprise', banner)>0 and c.os like '%AIX%'"
-export ORDERBY="c.physical_server, r.node_name;"
+export FROM="$tCPU c left join $tRAC r left join $tVersion v on r.node_name=v.host_name on c.host_name=r.node_name"
+export WHERE="r.nodes_count > 1 and c.os like '%AIX%'"
+export ORDERBY="r.database_name, r.rac_instance, r.node_name, c.physical_server"
 
 export SQL="select $SELECT from $FROM where $WHERE order by $ORDERBY;"
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
@@ -103,7 +106,7 @@ mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$
 # Base de données en Enterprise Edition : calcul des processeurs pour serveurs AIX
 print_proc_oracle_aix $SELECT'|'$FROM'|'$WHERE
 # export des données
-export_to_xml
 # fermeture de la feuille
 close_xml_sheet
 
+#!/bin/bash 
