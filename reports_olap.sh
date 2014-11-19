@@ -109,8 +109,6 @@ from $tOLAP o left join $tCPU c on o.host_name=c.host_name
 where c.os like '%AIX%' and owner != 'SYS' and count_nbr not in ('','0','-942')
 order by PHYSICAL_SERVER) r
 group by physical_server;
-select * from proc_oracle;
-
 select * from proc_oracle;"
 
 
