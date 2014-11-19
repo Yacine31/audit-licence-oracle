@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 :<<HISTORIQUE
 20/05/2014 - insertion des données sur le partitioning dans la base MySQL
 22/05/2014 - insersion des données des fichiers versions.csv ds la base
@@ -32,7 +32,7 @@ function fnSqlProfiles {
 	# ensuite on parcourt les fichiers XXX_YYY_options.csv pour les insérer dans la table 
 	rm -f $TMPFILE 2>/dev/null
 	echo -n "Insertion des données SQL PROFILES à partir des fichiers XXX_YYY_options.csv dans la table $TABLE : "
-	find -type f -iname $SRCFILE | while read f
+	find -type f -iname "$SRCFILE" | while read f
 	do 
 		echo -n "."
 		cat "$f" | grep "^GREPME" | grep ",SQL_PROFILES," | cut -d',' -f3,5,6,12- >> $TMPFILE
@@ -56,7 +56,7 @@ function fnRAC {
 	# ensuite on parcourt les fichiers XXX_YYY_options.csv pour les insérer dans la table 
 	rm -f $TMPFILE 2>/dev/null
 	echo -n "Insertion des données RAC à partir des fichiers XXX_YYY_options.csv dans la table $TABLE : "
-	find -type f -iname $SRCFILE | while read f
+	find -type f -iname "$SRCFILE" | while read f
 	do 
 		echo -n "."
 		cat "$f" | grep "^GREPME" | grep ",RAC,GV\$INSTANCE" | cut -d',' -f2,3,6,9,11,12,13 >> $TMPFILE
@@ -78,7 +78,7 @@ function fnPart {
 	# ensuite on parcourt les fichiers XXX_YYY_segments pour les insérer dans la table 
 	rm -f $TMPFILE 2>/dev/null
 	echo -n "Insertion des fichiers XXX_YYY_segments.csv dans la table $TABLE : "
-	find -type f -iname $SRCFILE | while read f
+	find -type f -iname "$SRCFILE" | while read f
 	do 
 		echo -n "."
 		cat "$f" | grep "^0," >> $TMPFILE
@@ -99,7 +99,7 @@ function fnAdminPack {
 
 	echo -n "Insertion des fichiers XXX_YYY_dba_feature.csv dans la table $TABLE : "
 	rm -f $TMPFILE 2>/dev/null
-	find -type f -iname $SRCFILE | while read f
+	find -type f -iname "$SRCFILE" | while read f
 	do 
 		echo -n "."
 		# le champs description contient des , ce qui pose problème lors de l'insertion
@@ -125,7 +125,7 @@ function fnVersion {
 
 	echo -n "Insertion des fichiers XXX_YYY_version.csv dans la table $TABLE : "
 	rm -f $TMPFILE 2>/dev/null
-	find -type f -iname $SRCFILE | while read f
+	find -type f -iname "$SRCFILE" | while read f
 	do 
 		echo -n "."
 		cat "$f" | grep "^0," | head -1 | sed 's/"//g' >> $TMPFILE
@@ -151,7 +151,7 @@ function fnOlap {
 
 	echo -n "Insertion des données OLAP depuis les fichiers XXX_YYY_options.csv vers la table $TABLE : "
 	rm -f $TMPFILE 2>/dev/null
-	find -type f -iname $SRCFILE | while read f
+	find -type f -iname "$SRCFILE" | while read f
 	do 
 		echo -n "."
 		cat "$f" | grep '^GREPME' | grep 'OLAP,ANALYTIC_WORKSPACES' >> $TMPFILE
@@ -172,7 +172,7 @@ function fnSpatial {
 
 	echo -n "Insertion des données Spatial/Locator depuis les fichiers XXX_YYY_options.csv vers la table $TABLE : "
 	rm -f $TMPFILE 2>/dev/null
-	find -type f -iname $SRCFILE | while read f
+	find -type f -iname "$SRCFILE" | while read f
 	do 
 		echo -n "."
 		cat "$f" | grep '^GREPME' | grep ',SPATIAL,' | egrep -v '0$|-942$'  >> $TMPFILE
@@ -192,7 +192,7 @@ function fnvoption {
 
 	echo -n "Insertion des données des fichiers XXX_YYY_v_option.csv dans la table $TABLE : "
 	rm -f $TMPFILE 2>/dev/null
-	find -type f -iname $SRCFILE | while read f
+	find -type f -iname "$SRCFILE" | while read f
 	do 
 		echo -n "."
 		cat "$f" | grep '^0,'  >> $TMPFILE
@@ -213,7 +213,7 @@ function fnRegistry {
 
 	echo -n "Insertion des données de la vue dba_registry les fichiers XXX_YYY_options.csv vers la table $TABLE : "
 	rm -f $TMPFILE 2>/dev/null
-	find -type f -iname $SRCFILE | while read f
+	find -type f -iname "$SRCFILE" | while read f
 	do 
 		echo -n "."
 		cat "$f" | grep '^GREPME' | grep ',DBA_REGISTRY,'  >> $TMPFILE
@@ -235,7 +235,7 @@ function fnDataMining {
 
 	echo -n "Insertion des données data_mining depuis les fichiers XXX_YYY_options.csv vers la table $TABLE : "
 	rm -f $TMPFILE 2>/dev/null
-	find -type f -iname $SRCFILE | while read f
+	find -type f -iname "$SRCFILE" | while read f
 	do 
 		echo -n "."
 		cat "$f" | grep '^GREPME' | grep ',DATA_MINING,'  >> $TMPFILE
