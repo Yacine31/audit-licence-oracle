@@ -16,7 +16,7 @@ echo "
 "
 echo "Liste des bases qui utilisent Active Data Guard et qui sont en Enterprise Edition"
 
-export SQL="select c.physical_server, d.host_name, d.instance_name, d.name, d.version, 
+export SQL="select distinct c.physical_server, d.host_name, d.instance_name, d.name, d.version, 
 d.detected_usages, d.last_usage_date, banner
 from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
 where d.host_name=v.host_name and d.instance_name=v.instance_name
