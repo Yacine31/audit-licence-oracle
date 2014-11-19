@@ -249,7 +249,8 @@ function get_sockets_number {
 		Linux )
 			# pour linux les infos sont dans le fichier après la commande dmidecode --type processor
 			# si ID est different de 00 00 00 00 00 00 alors le PROC existent bien et on le compte
-			NB_SOCKETS=`cat "$@" | grep "ID:" | grep -v "00 00 00 00 00 00 00 00" | wc -l`
+			# sur certaines machine IBM, il faut supprimer les lignes UUID:
+			NB_SOCKETS=`cat "$@" | grep "ID:" | grep -v UUID | grep -v "00 00 00 00 00 00 00 00" | wc -l`
 		;;
 
 		* )
