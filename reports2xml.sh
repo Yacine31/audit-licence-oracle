@@ -88,29 +88,25 @@ print_xml_header $XML_FILE
 #--------------------------------------------------------------------------------#
 # Infos générales par rapport à l'audit 
 #--------------------------------------------------------------------------------#
+
+# 
+# select OS, count(*) 'Nombre de serveurs' from $tCPU group by os  union select '--- Tous les OS : ---', count(*) from $tCPU;
+# 
+echo "Statistiques des serveurs et OS :"
+export SQL="select OS, count(*) 'Nombre de serveurs' from $tCPU group by os union select '--- Total des serveurs ---', count(*) from $tCPU;"
+mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL" 
+
+echo "Les bases et les versions :"
+export SQL="select banner 'Version', count(*) 'Nombre de bases' from $tVersion group by banner 
+union select '--- Total des bases ---', count(*) from $tVersion;"
+mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL" 
+
 export SQL="
-select '----------------------------------' from dual;
-select concat('Nombre de serveurs traités : ', count(*)) from $tCPU;
-select '----------------------------------' from dual;
-select 'Répartition des serveurs par OS   : ' from dual;
-
--- select concat(count(*), ' serveur(s) avec OS : ', left(os, 9)) from $tCPU group by left(os, 9);
-select concat(rpad(count(*),5,' '), ' serveur(s) avec OS : ', os) from $tCPU group by os;
-
-select '----------------------------------' from dual;
-select concat('Nombre de base de données  : ', count(*)) from $tVersion;
-select '----------------------------------' from dual;
-
 select 'Les bases par editions : ' from dual;
 select concat('Personal Edition   : ', count(*)) from $tVersion where banner like '%Oracle%' and banner like '%Personal%' ;
 select concat('Express Edition    : ', count(*)) from $tVersion where banner like '%Oracle%' and banner like '%Express%' ;
 select concat('Standard Edition   : ', count(*)) from $tVersion where banner like '%Oracle%' and banner not like '%Enterprise%' and banner not like '%Personal%' and banner not like '%Express%' ;
 select concat('Enterprise Edition : ', count(*)) from $tVersion where banner like '%Oracle%' and banner like '%Enterprise%' ;
-select '----------------------------------' from dual;
-
-select 'Les bases par version : ' from dual;
-select concat(rpad(count(*),5,' '), 'base(s) en : ', banner) from $tVersion group by banner order by banner desc;
--- select count(*), banner from $tVersion group by banner order by 2 desc;
 select '----------------------------------' from dual;
 "
 mysql -ss -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
@@ -121,40 +117,39 @@ open_xml_sheet
 # export des données 
 export_to_xml 
 
-echo "Les serveurs sans base de données"
+# ici on liste les serveurs qui n'ont pas de base de données associées : oubli de passage des scripts ou serveurs qui n'héberge pas de base Oracle
 export SQL="select Host_Name, os, Marque, Model, Processor_Type 
 from $tCPU where host_name not in (SELECT Host_Name FROM $tVersion)
 order by Host_Name;
 "
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
+RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
+if [ "$RESULT" != "" ]; then
+    echo "Les serveurs sans base de données"
+    mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
 
-# export des données 
-export_to_xml 
+    # export des données 
+    export_to_xml 
+fi
 
-echo "Les serveur sans le résultat de lms_cpuq.sh"
+# ici on vérifie si tous les serveurs récupérés depuis les fichiers CSV des bases, ont un résultat du script lms_cpuq.
 export SQL="SELECT distinct Host_Name FROM $tVersion where Host_Name not in (select Host_Name from $tCPU) order by Host_Name;"
 
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
+RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
+if [ "$RESULT" != "" ]; then
+    echo "Les serveur sans le résultat de lms_cpuq.sh"
 
-# export des données 
-export_to_xml 
+    mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
+
+    # export des données 
+    export_to_xml 
+fi
+
 # fermeture de la feuille
 close_xml_sheet
 
 #--------------------------------------------------------------------------------#
 # Base de données en Standard Edition
 #--------------------------------------------------------------------------------#
-
-
-echo "
-#--------------------------------------------------------------------------------#
-# Base de données en Standard Edition
-#--------------------------------------------------------------------------------#
-"
-
-#--------- liste des serveurs avec une instance en SE
-
-echo "Les serveurs en Standard Edition"
 
 export SELECT=" distinct c.physical_server, v.Host_Name, v.instance_name, c.os, c.Marque, c.Model, v.banner"
 export FROM="$tVersion v left join $tCPU c on c.Host_Name=v.Host_Name"
@@ -165,49 +160,55 @@ SQL="SELECT $SELECT from $FROM where $WHERE order by $ORDERBY ;"
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
 
+RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
+if [ "$RESULT" != "" ]; then
+    echo "#--------------------------------------------------------------------------------#"
+    echo "# Base de données en Standard Edition"
+    echo "#--------------------------------------------------------------------------------#"
 
-#--------- insertion des données de la requête dans le fichier XML
-export SHEET_NAME=SE
-# ouverture d'une feuille Excel
-open_xml_sheet
-# export des données 
-export_to_xml 
-# la feuille reste ouverte pour y ajouter le calcul
-# la fonction close sera appelée plus tard
+    echo 
+    echo "Les serveurs et bases en Standard Edition :"
+    echo 
+    mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL" 
 
-#--------- groupement par serveur pour calculer le nombre de sockets
+    #--------- insertion des données de la requête dans le fichier XML
+    export SHEET_NAME=SE
+    # ouverture d'une feuille Excel
+    open_xml_sheet
+    # export des données 
+    export_to_xml 
+    # la feuille reste ouverte pour y ajouter le calcul
+    # la fonction close sera appelée plus tard
 
-echo "Regroupement par serveur physique pour le calcul des processeurs"
+    #--------- groupement par serveur pour calculer le nombre de sockets
 
-export SELECT=" distinct c.physical_server, c.Marque, c.Model, c.os, c.Processor_Type, c.Socket "
-export FROM="$tVersion v left join $tCPU c on c.Host_Name=v.Host_Name"
-export WHERE=" v.banner like '%Oracle%' and v.banner not like '%Enterprise%' and v.banner not like '%Personal%' and v.banner not like '%Express%' "
-export GROUPBY=" c.physical_server "
-export ORDERBY=" c.physical_server, c.Host_Name, c.os "
+    echo 
+    echo "Regroupement par serveur physique pour le calcul des processeurs :"
+    echo 
 
-SQL="SELECT $SELECT from $FROM where $WHERE group by $GROUPBY order by $ORDERBY ;"
+    export SELECT=" distinct c.physical_server, c.Marque, c.Model, c.os, c.Processor_Type, c.Socket "
+    export FROM="$tVersion v left join $tCPU c on c.Host_Name=v.Host_Name"
+    export WHERE=" v.banner like '%Oracle%' and v.banner not like '%Enterprise%' and v.banner not like '%Personal%' and v.banner not like '%Express%' "
+    export GROUPBY=" c.physical_server "
+    export ORDERBY=" c.physical_server, c.Host_Name, c.os "
 
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+    SQL="SELECT $SELECT from $FROM where $WHERE group by $GROUPBY order by $ORDERBY ;"
 
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
+    if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 
-#--------- insertion des données de la requête dans le fichier XML
-# feuille déjà ouverte on ajoute le tableau de calcul des sockets
-export_to_xml
-# fermeture de la feuille
-close_xml_sheet
+    mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL" 
+
+    #--------- insertion des données de la requête dans le fichier XML
+    # feuille déjà ouverte on ajoute le tableau de calcul des sockets
+    export_to_xml
+    # fermeture de la feuille
+    close_xml_sheet
+fi
 
 #--------------------------------------------------------------------------------#
 # Bases de données en Enterprise Edition
 #--------------------------------------------------------------------------------#
-echo "
-#--------------------------------------------------------------------------------#
-# Bases de données en Enterprise Edition
-#--------------------------------------------------------------------------------#
-"
-echo "Les serveurs en Enterprise Edition "
 
 #--------- liste des serveurs avec une instance en SE
 export SELECT_EE="distinct c.physical_server, v.Host_Name, v.instance_name, c.OS, c.Processor_Type, v.banner "
@@ -219,50 +220,63 @@ export SQL="select $SELECT_EE from $FROM where $WHERE order by $ORDERBY;"
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
+RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
+if [ "$RESULT" != "" ]; then
+    echo "#--------------------------------------------------------------------------------#"
+    echo "# Bases de données en Enterprise Edition"
+    echo "#--------------------------------------------------------------------------------#"
 
+    mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
 
-#--------- insertion des données de la requête dans le fichier XML
-export SHEET_NAME=EE
-# ouverture d'une feuille Excel
-open_xml_sheet
-# export des données
-export_to_xml
+    #--------- insertion des données de la requête dans le fichier XML
+    export SHEET_NAME=EE
+    # ouverture d'une feuille Excel
+    open_xml_sheet
+    # export des données
+    export_to_xml
 
-#--------- Calcul des processeurs : OS != AIX
-export SELECT_NON_AIX="distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, '' as Total_Cores, '' as Core_Factor, '' as Proc_Oracle"
-export WHERE="v.banner like '%Enterprise%' and v.banner not like '%Personal%' and v.banner not like '%Express%' and c.os not like '%AIX%' "
-export ORDERBY="c.physical_server, c.Host_Name, c.os"
-# affichage du tableau pour le calcul du nombre de processeur
-print_proc_oracle $SELECT_NON_AIX'|'$FROM'|'$WHERE
-# export des données
-export_to_xml
+    #--------- Calcul des processeurs : OS != AIX
+    export SELECT_NON_AIX="distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, '' as Total_Cores, '' as Core_Factor, '' as Proc_Oracle"
+    export WHERE="v.banner like '%Enterprise%' and v.banner not like '%Personal%' and v.banner not like '%Express%' and c.os not like '%AIX%' "
+    export ORDERBY="c.physical_server, c.Host_Name, c.os"
+    
+    export SQL="select $SELECT_NON_AIX from $FROM where $WHERE"
+    RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
+    if [ "$RESULT" != "" ]; then
+        # affichage du tableau pour le calcul du nombre de processeur
+        print_proc_oracle $SELECT_NON_AIX'|'$FROM'|'$WHERE
+        
+        # export des données
+        export_to_xml
 
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+        if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+    fi
 
-#--------- Calcul des processeurs : OS = AIX
-# SELECT_EE_AIX définie plus haut
-echo "Caractéristiques des serveurs AIX, la colonne CPU_Oracle correspond au nombre de processeurs Oracle retenus"
-export FROM="$tVersion v left join $tCPU c on v.HOST_NAME=c.Host_Name "
-export WHERE="v.banner like '%Enterprise%' and v.banner not like '%Personal%' and v.banner not like '%Express%' and c.os like '%AIX%' "
+    #--------- Calcul des processeurs : OS = AIX
+    # SELECT_EE_AIX définie plus haut
+    export FROM="$tVersion v left join $tCPU c on v.HOST_NAME=c.Host_Name "
+    export WHERE="v.banner like '%Enterprise%' and v.banner not like '%Personal%' and v.banner not like '%Express%' and c.os like '%AIX%' "
 
-export SQL="select $SELECT_EE_AIX from $FROM where $WHERE order by $ORDERBY ;"
+    export SQL="select $SELECT_EE_AIX from $FROM where $WHERE order by $ORDERBY ;"
 
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+    RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
+    if [ "$RESULT" != "" ]; then
+        if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+        echo "Caractéristiques des serveurs AIX, la colonne CPU_Oracle correspond au nombre de processeurs Oracle retenus"
+        mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
 
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
+        # export des données
+        export_to_xml
 
+        print_proc_oracle_aix $SELECT_EE_AIX'|'$FROM'|'$WHERE
 
-# export des données
-export_to_xml
+        #--------- insertion des données de la requête dans le fichier XML
+        export_to_xml
+    fi
 
-print_proc_oracle_aix $SELECT_EE_AIX'|'$FROM'|'$WHERE
-
-#--------- insertion des données de la requête dans le fichier XML
-export_to_xml
-# fermeture de la feuille
-close_xml_sheet
-
+    # fermeture de la feuille
+    close_xml_sheet
+fi
 
 #--------------------------------------------------------------------------------#
 # Option RAC 
@@ -278,13 +292,11 @@ reports_rac.sh $PROJECT_NAME
 reports_partitioning.sh $PROJECT_NAME
 
 
-
 #--------------------------------------------------------------------------------#
 # Option OLAP
 #--------------------------------------------------------------------------------#
 
 reports_olap.sh $PROJECT_NAME
-
 
 #--------------------------------------------------------------------------------#
 # Option Datamining

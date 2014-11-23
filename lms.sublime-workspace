@@ -4,6 +4,18 @@
 		"selected_items":
 		[
 			[
+				"Sta",
+				"Standard"
+			],
+			[
+				"E",
+				"Enterprise"
+			],
+			[
+				"SELECT_",
+				"SELECT_NON_AIX"
+			],
+			[
 				"data",
 				"data_mining"
 			],
@@ -26,10 +38,6 @@
 			[
 				"SELE",
 				"SELECT"
-			],
-			[
-				"E",
-				"Edition"
 			],
 			[
 				"Sp",
@@ -164,26 +172,18 @@
 	"buffers":
 	[
 		{
-			"file": "reports_data_mining.sh",
+			"file": "reports_olap.sh",
 			"settings":
 			{
-				"buffer_size": 4395,
+				"buffer_size": 4875,
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "fonctions.sh",
+			"file": "reports_diagnostics.sh",
 			"settings":
 			{
-				"buffer_size": 4360,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "reports_adv_compression.sh",
-			"settings":
-			{
-				"buffer_size": 5425,
+				"buffer_size": 7571,
 				"line_ending": "Unix"
 			}
 		},
@@ -191,18 +191,34 @@
 			"file": "reports2xml.sh",
 			"settings":
 			{
-				"buffer_size": 15901,
+				"buffer_size": 17137,
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"contents": "#!/bin/bash\n:<<HISTORIQUE\n23/05/2014 - première version\nHISTORIQUE\n\n:<<USAGE\nLe script est appelé une fois pour créer les différentes tables dans la BDD\nUSAGE\n\n# Inclusion des fonctions\nREP_COURANT=\"/home/merlin/lms_scripts\"\n. ${REP_COURANT}/fonctions.sh\n\n\n# si aucun paramètre en entrée on quitte\n[ \"$1\" = \"\" ] && echo \"Syntax: $0 PROJECT_NAME\" && exit 1\n\n# variables globales\nDELIM=\",\"\n\nfunction fnCreateTable {\n	# creation d'une table vide à partir des entetes du fichier CSV passé en paramètre\n	TABLE=$1\n	HEADER=$2\n\n	# à partir de la variable HEADER on créé la table \n	FIELDS=$(echo $HEADER | sed -e 's/'$DELIM'/` varchar(255),\\n`/g' -e 's/\\r//g')\n	FIELDS='`'\"$FIELDS\"'` varchar(255)'\n	echo -n \"Création de la table $TABLE .... \"\n	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e \"\n	DROP TABLE IF EXISTS $TABLE;\n	CREATE TABLE $TABLE ($FIELDS);\"\n	echo \" terminée\"\n}\n\nfunction fnAddPrimaryKey {\n	# ajout d'une clé primaire sur une table\n	TABLE=$1\n	KEY=$2\n	\n	# TODO : ajouter la vérification des paramètres \n	echo -n \"Ajout de la clé primaire ($KEY) à la table $TABLE ... \"\n	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e \"\n	ALTER TABLE $TABLE ADD PRIMARY KEY ($KEY);\"\n	echo \" terminé\"\n\n}\n\n# création de la table sqlprofiles\nTABLE=$1\"_sqlprofiles\"\nHEADER=\"instance_name,host_name,database_name,name,created,last_modified,description,type,status\"\nfnCreateTable $TABLE $HEADER\n\n\n# création de la table rac\nTABLE=$1\"_rac\"\nHEADER=\"host_name,instance_name,database_name,nodes_count,rac_instance,node_name,node_id,instance_status\"\nfnCreateTable $TABLE $HEADER\n\n# création de la table dba_feature\nTABLE=$1\"_dba_feature\"\nHEADER=\"AUDIT_ID,DBID,NAME,VERSION,DETECTED_USAGES,TOTAL_SAMPLES,CURRENTLY_USED,\"\nHEADER=$HEADER\"FIRST_USAGE_DATE,LAST_USAGE_DATE,AUX_COUNT,FEATURE_INFO,LAST_SAMPLE_DATE,\"\nHEADER=$HEADER\"LAST_SAMPLE_PERIOD,SAMPLE_INTERVAL,DESCRIPTION,HOST_NAME,INSTANCE_NAME,SYSDATE\"\nfnCreateTable $TABLE $HEADER\n\n# création de la table segments\nTABLE=$1\"_segments\"\nHEADER=\"AUDIT_ID,OWNER,SEGMENT_TYPE,SEGMENT_NAME,PARTITION_COUNT,PARTITION_MIN,PARTITION_MAX,HOST_NAME,INSTANCE_NAME,SYSDATE\"\nfnCreateTable $TABLE $HEADER\n\n# création de la table version\nTABLE=$1\"_version\"\nHEADER=\"AUDIT_ID,BANNER,HOST_NAME,INSTANCE_NAME,SYSDATE\"\nfnCreateTable $TABLE $HEADER\n\n\n# ajout de la clé sur la table version : host + instance\nKEY=HOST_NAME,INSTANCE_NAME\nfnAddPrimaryKey $TABLE $KEY\n\n# creation de la table dba_feature_usage (plus complète que dba_feature)\nTABLE=$1\"_dba_usage\"\nHEADER=\"HOST_NAME,INSTANCE_NAME,DBA_FEATURE_USAGE_STATISTICS,COUNT,NAME,VERSION,DETECTED_USAGES,TOTAL_SAMPLES,CURRENTLY_USED,FIRST_USAGE_DATE,LAST_USAGE_DATE,LAST_SAMPLE_DATE,SAMPLE_INTERVAL\"\nfnCreateTable $TABLE $HEADER\n\n# creation de la table pour les données OLAP\n\n# création de la table pour les données DB collectées par le script extract.sh\nTABLE=$1\"_db\"\nHEADER=\"HOST_NAME,INSTANCE_NAME,DB_VERSION_MAJ,PLATFORM_NAME,DB_EDITION,DB_CREATED_DATE,\"\nHEADER=$HEADER\"DIAG_PACK_USED,TUNING_PACK_USED,V_OPT_RAC,V_OPT_PART,OLAP_INSTALLED,OLAP_CUBES,ANALYTIC_WORKSPACES,\"\nHEADER=$HEADER\"V_OPT_DM,V_OPT_SPATIAL,V_OPT_ACDG,V_OPT_ADVSEC,V_OPT_LBLSEC,V_OPT_DBV,USERS_CREATED,SESSIONS_HW\"\nfnCreateTable $TABLE $HEADER\n\n# ajout de la clé primaire sur cette table HOST_NAME+INSTANCE_NAME\nKEY=HOST_NAME,INSTANCE_NAME\nfnAddPrimaryKey $TABLE $KEY\n\n#mysql -u${MYSQL_USER} -${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e \"\n#ALTER TABLE ${1}_db ADD PRIMARY KEY (Host_Name, Instance_Name);\"\n#echo \"Création de la clé primaire ... OK\"\n\n# creation de la table pour les données serveurs\nTABLE=$1\"_cpu\"\nHEADER=\"PHYSICAL_SERVER,Host_Name,OS,Marque,Model,Virtuel,Processor_Type,Socket,Cores_per_Socket,Total_Cores,\"\nHEADER=$HEADER\"Node_Name,Partition_Name,Partition_Number,Partition_Type,Partition_Mode,Entitled_Capacity,Active_CPUs_in_Pool,Online_Virtual_CPUs,Machine_Serial_Number,Active_Physical_CPUs\"\nfnCreateTable $TABLE $HEADER\n\n# ajout de la clé primaire sur cette table HOST_NAME\nKEY=Host_Name\nfnAddPrimaryKey $TABLE $KEY\n\n# creation de la table pour les serveurs physiques\nTABLE=$1\"_pservers\"\nHEADER=\"Physical_Server,Socket,Cores_per_Socket\"\nfnCreateTable $TABLE $HEADER\n# ajout de la clé primaire\nKEY=Physical_Server\nfnAddPrimaryKey $TABLE $KEY\n\n\n# creation de la table pour les données OLAP\nTABLE=$1\"_olap\"\nHEADER=\"GREPME,Host_Name,Instance_Name,Sysdate,Host_name_2,Instance_Name_2,Olap_Header,ANALYTIC_WORKSPACES_HEADER,Count_Nbr,Count_Txt,OWNER,AW_NUMBER,AW_NAME,PAGESPACES,GENERATIONS\"\nfnCreateTable $TABLE $HEADER\n# ajout de la clé primaire\nKEY=host_name,instance_name,OWNER,AW_NAME\nfnAddPrimaryKey $TABLE $KEY\n\n# creation de la table pour les données Spatial\nTABLE=$1\"_spatial\"\nHEADER=\"GREPME,Host_Name,Instance_Name,Sysdate,Host_name_2,Instance_Name_2,Spatial,Metadata,Count_Nbr,Count_Txt,OWNER,name,geometry\"\nfnCreateTable $TABLE $HEADER\n# ajout de la clé primaire sur cette table \nKEY=HOST_NAME,INSTANCE_NAME,OWNER,NAME\nfnAddPrimaryKey $TABLE $KEY\n\n# creation de la table v_options\nTABLE=$1\"_v_option\"\nHEADER=\"AUDIT_ID,PARAMETER,VALUE,HOST_NAME,INSTANCE_NAME,SYSDATE\"\nfnCreateTable $TABLE $HEADER\n# ajout de la clé primaire sur cette table \nKEY=HOST_NAME,INSTANCE_NAME,PARAMETER\nfnAddPrimaryKey $TABLE $KEY\n\n\n# creation de la table pour les données registry\nTABLE=$1\"_registry\"\nHEADER=\"GREPME,Host_Name,Instance_Name,Sysdate,Host_name_2,Instance_Name_2,DBA_REGISTRY,Metadata,Count_Nbr,Count_Txt,COMP_NAME,VERSION,STATUS,MODIFIED,SCHEMA\"\nfnCreateTable $TABLE $HEADER\n# ajout de la clé primaire sur cette table \nKEY=HOST_NAME,INSTANCE_NAME,COMP_NAME,VERSION\nfnAddPrimaryKey $TABLE $KEY\n\n# creation de la table pour les données DATA MINING\nTABLE=$1\"_data_mining\"\nHEADER=\"GREPME,Host_Name,Instance_Name,Sysdate,Host_name_2,Instance_Name_2,Data_Mining,Metadata,Count_Nbr,Count_Txt,Owner,Model_Name,\"\nHEADER=$HEADER\"MINING_FUNCTION,ALGORITHM,CREATION_DATE,BUILD_DURATION,MODEL_SIZE\"\nfnCreateTable $TABLE $HEADER\n# ajout de la clé primaire sur cette table \nKEY=HOST_NAME,INSTANCE_NAME,Owner,Model_Name\nfnAddPrimaryKey $TABLE $KEY\n",
-			"file": "initdb.sh",
-			"file_size": 6093,
-			"file_write_time": 1411594556000000,
+			"contents": "#!/bin/bash \n\n# Inclusion des fonctions\nREP_COURANT=\"/home/merlin/lms_scripts\"\n. ${REP_COURANT}/fonctions.sh\n. ${REP_COURANT}/fonctions_xml.sh\n\n\n#--------------------------------------------------------------------------------#\n# Option RAC \n#--------------------------------------------------------------------------------#\nDEBUG=0\n\n#--- tous les serveurs et tous les OS :\n\nexport SELECT=\"distinct\nc.physical_server 'Physical Server',\nr.node_name 'Node name',\nr.database_name 'Database Name',\nr.rac_instance 'Instance Name',\nr.nodes_count 'Nodes Count',\nr.node_id 'Node ID',\nif(locate('Enterprise', banner)>0, 'Enterprise', if(locate('Standard', banner)>0,'Standard','ND')) Edition ,\nc.Model,\nc.OS,\nc.Processor_Type\"\n\nexport FROM=\"$tCPU c left join $tRAC r left join $tVersion v on r.node_name=v.host_name on c.host_name=r.node_name\"\nexport WHERE=\"r.nodes_count > 1\"\nexport ORDERBY=\"c.physical_server, r.database_name, r.node_name, r.rac_instance\"\n\nexport SQL=\"select $SELECT from $FROM where $WHERE order by $ORDERBY;\"\n\nRESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e \"$SQL\")\nif [ \"$RESULT\" != \"\" ]; then\n	echo \"#--------------------------------------------------------------------------------#\"\n	echo \"# Option RAC \"\n	echo \"#--------------------------------------------------------------------------------#\"\n	echo \"Les serveurs avec option RAC en Enterprise Edition\"\n\n	if [ \"$DEBUG\" == \"1\" ]; then echo \"[DEBUG] - $SQL\"; fi\n	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e \"$SQL\"\n\n	export SHEET_NAME=RAC\n\n	# ouverture d'une feuille Excel\n	open_xml_sheet\n	# export des données\n	export_to_xml\n\n	# insertion des données de la requête dans le fichier XML\n	export WHERE=\"r.nodes_count > 1 and c.os not like '%AIX%'\"\n	export SQL=\"select $SELECT from $FROM where $WHERE order by $ORDERBY;\"\n\n	if [ \"$DEBUG\" == \"1\" ]; then echo \"[DEBUG] - $SQL\"; fi\n\n	# export des données\n	export_to_xml\n\n	#--------------------------------------------------------------------------------#\n	#--------- Calcul des processeurs : OS != AIX\n	#--------------------------------------------------------------------------------#\n\n	export SELECT_NON_AIX=\"distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, '' as Total_Cores, '' as Core_Factor, '' as Proc_Oracle\"\n	export FROM=\"$tCPU c left join $tRAC r left join $tVersion v on r.node_name=v.host_name on c.host_name=r.node_name\"\n	export WHERE=\"r.nodes_count > 1 and c.os not like '%AIX%'\"\n	export ORDERBY=\"c.physical_server\"\n\n	SQL=\"select $SELECT from $FROM where $WHERE order by $ORDERBY;\"\n\n	RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e \"$SQL\")\n	if [ \"$RESULT\" != \"\" ]; then\n		# affichage du tableau pour le calcul du nombre de processeur\n		print_proc_oracle $SELECT_NON_AIX'|'$FROM'|'$WHERE\n\n		# export des données\n		export_to_xml\n	fi\n\n\n	#--------------------------------------------------------------------------------#\n	# ---- Les serveurs OS == 'AIX' :\n	#--------------------------------------------------------------------------------#\n\n	export SELECT=\"distinct \n	c.physical_server 'Physical Server',\n	c.Host_Name 'Host Name',\n	r.node_name 'Node name',\n	if(locate('Enterprise', banner)>0, 'Enterprise', 'Standard') Edition,\n	-- c.Model,\n	c.OS,\n	c.Processor_Type 'Proc Type',\n	c.Partition_Type 'Partition Type',\n	c.Partition_Mode 'Partition Mode',\n	c.Entitled_Capacity 'EC',\n	c.Active_CPUs_in_Pool 'ACiP',\n	c.Online_Virtual_CPUs 'OVC',\n	c.Active_Physical_CPUs 'APC',\n	c.Core_Count ,\n	c.Core_Factor ,\n	c.CPU_Oracle\"\n\n	export FROM=\"$tCPU c left join $tRAC r left join $tVersion v on r.node_name=v.host_name on c.host_name=r.node_name\"\n	export WHERE=\"r.nodes_count > 1 and c.os like '%AIX%'\"\n	export ORDERBY=\"c.physical_server, r.database_name, r.node_name, r.rac_instance\"\n	# export ORDERBY=\"r.database_name, r.rac_instance, r.node_name, c.physical_server\"\n\n	SQL=\"select $SELECT from $FROM where $WHERE order by $ORDERBY;\"\n\n	RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e \"$SQL\")\n	if [ \"$RESULT\" != \"\" ]; then\n		if [ \"$DEBUG\" == \"1\" ]; then echo \"[DEBUG] - $SQL\"; fi\n		mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e \"$SQL\"\n\n		# Option RAC : calcul des processeurs\n		# export FROM=\"$tDB d left join $tCPU c on d.HOST_NAME=c.Host_Name\"\n		# export WHERE=\"d.DB_Edition='Enterprise' and d.v_opt_rac!=0 and c.os='AIX'\"\n\n		# Base de données en Enterprise Edition : calcul des processeurs pour serveurs AIX\n		print_proc_oracle_aix $SELECT'|'$FROM'|'$WHERE\n	fi\n	# export des données\n	# fermeture de la feuille\n	close_xml_sheet\nfi\n",
+			"file": "reports_rac.sh",
+			"file_size": 4279,
+			"file_write_time": 1416699815000000,
 			"settings":
 			{
-				"buffer_size": 6049,
+				"buffer_size": 4610,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "reports_rat.sh",
+			"settings":
+			{
+				"buffer_size": 5098,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "reports_adv_compression.sh",
+			"settings":
+			{
+				"buffer_size": 6562,
 				"line_ending": "Unix"
 			}
 		}
@@ -231,22 +247,26 @@
 	},
 	"file_history":
 	[
+		"/home/merlin/lms_scripts/reports_adv_security.sh",
+		"/home/merlin/lms_scripts/reports_data_mining.sh",
+		"/home/merlin/lms_scripts/reports_tuning.sh",
+		"/home/merlin/lms_scripts/reports_active_dg.sh",
+		"/home/merlin/lms_scripts/reports_spatial.sh",
+		"/home/merlin/lms_scripts/reports_adv_compression.sh",
+		"/home/merlin/lms_scripts/reports_rac.sh",
+		"/home/merlin/lms_scripts/reports_partitioning.sh",
+		"/home/merlin/lms_scripts/reports2xml.sh",
+		"/home/merlin/lms_scripts/reports_olap.sh",
+		"/home/merlin/lms_scripts/fonctions_xml.sh",
+		"/home/merlin/lms_scripts/fonctions.sh",
+		"/home/merlin/lms_scripts/initdb.sh",
 		"/home/merlin/lms_scripts/loaddata.sh",
 		"/home/merlin/lms_scripts/calcul_proc.sh",
 		"/home/merlin/lms_scripts/db_options.sh",
-		"/home/merlin/lms_scripts/fonctions.sh",
 		"/home/merlin/lms_scripts/extract.sh",
-		"/home/merlin/lms_scripts/reports_rac.sh",
 		"/home/merlin/lms_scripts/lms_cpu.sh",
 		"/home/merlin/lms_scripts/lms_db.sh",
-		"/home/merlin/lms_scripts/reports2xml.sh",
-		"/home/merlin/lms_scripts/reports_tuning.sh",
 		"/home/merlin/lms_scripts/reports_diagnostics.sh",
-		"/home/merlin/lms_scripts/reports_olap.sh",
-		"/home/merlin/lms_scripts/initdb.sh",
-		"/home/merlin/lms_scripts/fonctions_xml.sh",
-		"/home/merlin/lms_scripts/reports_spatial.sh",
-		"/home/merlin/lms_scripts/reports_partitioning.sh",
 		"/home/merlin/lms_scripts/intel_query.sh",
 		"/home/merlin/lms_scripts/db_ee.php",
 		"/home/merlin/lms_scripts/db_se.php",
@@ -284,6 +304,9 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"--local-infile ",
+			", banner",
+			"--local-infile",
 			"uroot",
 			"$DB",
 			"proot",
@@ -363,28 +386,29 @@
 	"groups":
 	[
 		{
-			"selected": 4,
+			"selected": 3,
 			"sheets":
 			[
 				{
 					"buffer": 0,
-					"file": "reports_data_mining.sh",
+					"file": "reports_olap.sh",
 					"settings":
 					{
-						"buffer_size": 4395,
+						"buffer_size": 4875,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								109,
-								109
+								967,
+								967
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/ShellScript/Shell-Unix-Generic.tmLanguage"
+							"syntax": "Packages/ShellScript/Shell-Unix-Generic.tmLanguage",
+							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
 						"translation.y": 0.0,
@@ -394,70 +418,45 @@
 				},
 				{
 					"buffer": 1,
-					"file": "fonctions.sh",
+					"file": "reports_diagnostics.sh",
 					"settings":
 					{
-						"buffer_size": 4360,
+						"buffer_size": 7571,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								329,
-								329
+								3194,
+								3194
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/ShellScript/Shell-Unix-Generic.tmLanguage"
+							"syntax": "Packages/ShellScript/Shell-Unix-Generic.tmLanguage",
+							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 90.0,
+						"translation.y": 805.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
 					"buffer": 2,
-					"file": "reports_adv_compression.sh",
-					"settings":
-					{
-						"buffer_size": 5425,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								2277,
-								2277
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/ShellScript/Shell-Unix-Generic.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 334.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 3,
 					"file": "reports2xml.sh",
 					"settings":
 					{
-						"buffer_size": 15901,
+						"buffer_size": 17137,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								6223,
-								6223
+								4569,
+								4569
 							]
 						],
 						"settings":
@@ -467,25 +466,25 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 1530.0,
+						"translation.y": 1080.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
-					"buffer": 4,
-					"file": "initdb.sh",
+					"buffer": 3,
+					"file": "reports_rac.sh",
 					"settings":
 					{
-						"buffer_size": 6049,
+						"buffer_size": 4610,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								815,
-								815
+								4038,
+								4038
 							]
 						],
 						"settings":
@@ -494,7 +493,62 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 69.0,
+						"translation.y": 1270.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "reports_rat.sh",
+					"settings":
+					{
+						"buffer_size": 5098,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								863,
+								863
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/ShellScript/Shell-Unix-Generic.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1305.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "reports_adv_compression.sh",
+					"settings":
+					{
+						"buffer_size": 6562,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3995,
+								3995
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/ShellScript/Shell-Unix-Generic.tmLanguage",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 1045.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"

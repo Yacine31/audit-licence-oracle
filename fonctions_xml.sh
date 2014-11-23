@@ -119,6 +119,10 @@ do
 	done
 	echo "</Row>"   >> $XML_FILE
 done
+
+# suppression du fichier temporaire
+rm -f $TMP_FILE
+
 # echo "</Table>
 #</Worksheet>" >> $XML_FILE
 
@@ -141,7 +145,7 @@ echo "</Table>
 function export_to_xml {
 # export du résulat pour Excel
 
-mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" > $TMP_FILE
+mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL" > $TMP_FILE
 
 # si fichier TMP_FILE pas vide, donc il y a des résultats retourné par la requête SQL
 if [ -s $TMP_FILE ]
@@ -149,5 +153,20 @@ then
 	# insertion des données de la requête dans le fichier XML
 	print_xml_sheet $SHEET_NAME $TMP_FILE $XML_FILE
 fi
+}
 
+#--------------------------------------------------------------------------------#
+# Export des résultats vers un tampon XML
+#--------------------------------------------------------------------------------#
+
+function write_xml_buffer {
+
+  mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL" >> $TMP_FILE
+
+  # si fichier TMP_FILE pas vide, donc il y a des résultats retourné par la requête SQL
+  if [ -s $TMP_FILE ]
+  then
+    # insertion des données de la requête dans le fichier XML
+    print_xml_sheet $SHEET_NAME $TMP_FILE $XML_FILE
+  fi
 }
