@@ -43,4 +43,4 @@ fi
 
 if [[ "$out" != "" ]]; then echo $out; fi
 
-rm -f $proc.html $proc.txt >/dev/null
+# rm -f $proc.html $proc.txt >/dev/null
