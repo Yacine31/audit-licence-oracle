@@ -44,7 +44,7 @@ if [ "$RESULT" != "" ]; then
 	#--------- Calcul des processeurs : OS != AIX
 	#--------------------------------------------------------------------------------#
 
-	export SQL="select distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, '' as Total_Cores, '' as Core_Factor, '' as Proc_Oracle
+	export SQL="select distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, c.Total_Cores, '' as Core_Factor, '' as Proc_Oracle
 	FROM $tSegments s left join $tCPU c on s.Host_Name=c.Host_Name
 	where c.os not like '%AIX%' and s.owner not in $SQL_NOT_IN 
 	group by c.physical_server

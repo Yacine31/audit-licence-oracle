@@ -60,6 +60,7 @@ create table ${tCPU}_tmp as
             when 5 then 0.75
             when 6 then 1
             when 7 then 1
+            when 8 then 1
     end as Core_Factor
     from ${tCPU} 
     order by physical_server, host_name;
@@ -236,7 +237,7 @@ if [ "$RESULT" != "" ]; then
     export_to_xml
 
     #--------- Calcul des processeurs : OS != AIX
-    export SELECT_NON_AIX="distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, '' as Total_Cores, '' as Core_Factor, '' as Proc_Oracle"
+    export SELECT_NON_AIX="distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, c.Total_Cores, '' as Core_Factor, '' as Proc_Oracle"
     export WHERE="v.banner like '%Enterprise%' and v.banner not like '%Personal%' and v.banner not like '%Express%' and c.os not like '%AIX%' "
     export ORDERBY="c.physical_server, c.Host_Name, c.os"
     
