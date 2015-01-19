@@ -319,7 +319,7 @@ function get_core_number {
 			NB_COEURS="ND SunOS"
 			NB_COEURS_TOTAL=0
 			# cat "$@" | egrep "^The physical processor has|^Le processeur physique a" | egrep -o ' [0-9] ' > /tmp/SunOS.tmp
-			cat "$@" | egrep "physical processor has|^Le processeur physique a" | egrep -o ' [0-9]+ ' > /tmp/SunOS.tmp
+			cat "$@" | egrep -o "physical processor has [0-9]+ |processeur physique a [0-9]+ " | egrep -o ' [0-9]+ ' > /tmp/SunOS.tmp
 			while read n
 			do
 			    (( NB_COEURS_TOTAL = NB_COEURS_TOTAL + n ))
