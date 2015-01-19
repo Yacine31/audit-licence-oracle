@@ -375,7 +375,6 @@ reports_rat.sh $PROJECT_NAME
 print_xml_footer $XML_FILE
 
 echo "-------------------------------------------------------------------------------"
-echo "Fichier texte : $(pwd)/$TXT_FILE"
 echo "Fichier à ouvrir dans Excel : $(pwd)/$XML_FILE"
 echo "-------------------------------------------------------------------------------"
 
