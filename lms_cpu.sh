@@ -12,6 +12,7 @@
 #            - ajout du maximum CPU in system pour les machines AIX : Active Physical CPUs in system
 # 03/08/2014 - ajout de la colonne physical_server : pour AIX=n° de serie, pour les autres cas = nom du serveur sinon VMWARE si VM
 # 16/01/2015 - get_processor_type corrigée pour les machine SunOS
+# 24/01/2015 - windows : calcul des sockets et coeurs corrigé 
 
 
 :<<README
@@ -109,13 +110,28 @@ function get_os {
 }
 
 function get_marque {
-	# cette ligne marche pour Linux
-	MARQUE=`cat "$@" | grep -v 'grep' | grep -i 'System Information' -A1 | grep -i 'Manufacturer' | cut -d':' -f2 |  sed 's/^ *//g' | head -1`
-	
-	# windows 2003, 2008
-	if [ ! "$MARQUE" ]; then
+
+    case $OS in
+	*Microsoft* )
+	    # windows 2003, 2008
+	    if [ ! "$MARQUE" ]; then
 		MARQUE=`cat "$@" | grep -i '^System' -A2 | grep -i 'Manufacturer:' | sed 's/  Manufacturer: //' | head -1`
-	fi
+	    fi
+	;;
+
+	Linux )
+	    # cette ligne marche pour Linux
+	    MARQUE=`cat "$@" | grep -v 'grep' | grep -i 'System Information' -A1 | grep -i 'Manufacturer' | cut -d':' -f2 |  sed 's/^ *//g' | head -1`
+	;;
+	
+	SunOS )
+	    MARQUE=`cat "$@" | grep -i '/usr/sbin/prtconf' -A1 | tail -1 | cut -d':' -f2 |  sed 's/^ *//g' | head -1`
+	;;
+
+	* )
+	    MARQUE="OS NOT DEF."
+	;;
+    esac
 }
 
 function get_modele {
@@ -123,9 +139,9 @@ function get_modele {
 	case $OS in
 	    SunOS )
 		# modele pour SunOS
-		# MODEL=`cat "$@" | grep -i '/usr/sbin/prtdiag' -A1 | tail -1 | cut -d':' -f2 |  sed 's/^ *//g' | head -1`
+		MODEL=`cat "$@" | grep -i '/usr/sbin/prtdiag' -A1 | tail -1 | cut -d':' -f2 |  sed 's/^ *//g' | head -1`
 		# cette information n'as pas d'intérêt dans le cas des serveurs SUN
-		MODEL="NA"
+		# MODEL="NA"
 	    ;;
 		
 	    Linux )
@@ -226,7 +242,8 @@ function get_sockets_number {
 	case $OS in 
 		*Microsoft* )
 	        # NB_SOCKETS=`cat "$@" | grep -i 'NumberOfProcessors:' | tail -1 | cut -d: -f2 | tr -d ' '`
-	        NB_SOCKETS=`cat "$@" | grep -i 'NumberOfProcessors:' | tail -1 |  egrep -o '([0-9])*'`
+	        # NB_SOCKETS=`cat "$@" | grep -v objTextFile.WriteLine | grep -i 'NumberOfProcessors:' | egrep -o '([0-9])*'`
+	        NB_SOCKETS=`cat "$@" | grep -v objTextFile.WriteLine | grep -i 'NumberOfProcessors:' | egrep -o '([0-9])*'`
 		;;
 
 		HP-UX )
@@ -274,7 +291,7 @@ function get_sockets_number {
 		;;
 
 		* )
-			NB_SOCKETS="---"
+			NB_SOCKETS="OS NOT DEF."
 		;;
 	esac
 }
@@ -291,10 +308,23 @@ function get_core_number {
 
 	case $OS in 
 		*Microsoft* )
-		    NB_COEURS=`cat "$@" | grep -i 'CPU NumberOfCores:' | tail -1 | cut -d: -f2 | tr -d ' '`
-		    NB_COEURS=${NB_COEURS:0:2}
-		    # cette chaine retourne le nombre de coeurs ou "PA" pour PATCH NOT AVAILABLE
-		    if [ $NB_COEURS == "PA" ]; then NB_COEURS="ND PATCH ERROR"; fi
+		    # cette chaine retourne le nombre de coeurs ou "PATCH" pour PATCH NOT AVAILABLE
+		    NB_COEURS=$(cat "$@" | grep -v objTextFile.WriteLine | grep -i 'CPU NumberOfCores:' | awk '{ print $3 }' | head -1)
+		    
+		    if [ $NB_COEURS == "PATCH" ] 
+		    then
+			# si $NB_COEURS="PATH", alors la valeur de NumberOfProcessors = nombre de coeurs ou nb_coeurs * 2 si processeur multithreadé
+			NB_COEURS="ND PATCH ERROR" 
+			NB_SOCKETS="ND PATCH ERROR"
+			NB_COEURS_TOTAL=$(cat "$@" | grep -v objTextFile.WriteLine | grep -i 'NumberOfProcessors:' | grep -o '[0-9]*')
+		    else
+			# Si NB_COEURS retourne un entier au lieu de PATCH EROOR, alors :
+			NB_SOCKETS=$(cat "$@" | grep -v objTextFile.WriteLine | grep -i 'NumberOfProcessors:' | grep -o '[0-9]*')
+			NB_COEURS=$(cat "$@" | grep -v objTextFile.WriteLine | grep -i 'CPU NumberOfCores:' | head -1 | grep -o '[0-9]*')
+			if [[ "$NB_COEURS" && "$NB_SOCKETS" ]]
+			    then NB_COEURS_TOTAL=$(expr $NB_SOCKETS \* $NB_COEURS)
+			fi
+		    fi
 		    # NB_COEURS_TOTAL=`cat "$@" | grep '\\CentralProcessor\\' | wc -l`
 		;;
 
@@ -331,10 +361,14 @@ function get_core_number {
 		Linux )
 			# pour linux les infos sont dans le fichier après la commande dmidecode --type processor
 			NB_COEURS=`cat "$@" | grep "^cpu cores" | sort | uniq | cut -d':' -f2 | egrep -o '[0-9]'`
+			if [[ "$NB_COEURS" && "$NB_SOCKETS" ]]
+			    then NB_COEURS_TOTAL=$(expr $NB_SOCKETS \* $NB_COEURS)
+			fi
 		;;
 
 		* )
-			NB_COEURS="ND OS_CASE"
+			NB_COEURS="OS NOT DEF."
+			NB_COEURS_TOTAL="OS NOT DEF."
 		;;
 	esac
 }
