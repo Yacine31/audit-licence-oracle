@@ -13,7 +13,8 @@
 # 03/08/2014 - ajout de la colonne physical_server : pour AIX=n° de serie, pour les autres cas = nom du serveur sinon VMWARE si VM
 # 16/01/2015 - get_processor_type corrigée pour les machine SunOS
 # 24/01/2015 - windows : calcul des sockets et coeurs corrigé 
-
+# 26/01/2015 - Ajout de Model et calcul des procs disponibles/actifs sur SunOS
+ 
 
 :<<README
 Postulat de depart :
@@ -91,7 +92,7 @@ function get_os {
 	# cette ligne marche pour les Unix et Linux, SunOS, AIX
 	OS=`cat "$@" | grep '^Operating System Name' | sort | uniq | cut -d'=' -f2 `
 
-	# pour les Unix on récupère aussi la release
+	# pour les Unix/SunOS on récupère aussi la release
 	RELEASE=`cat "$@" | grep "^Operating System Release=" | sort | uniq | cut -d'=' -f2`
 	
 	# si la chaine de caractère est vide, alors on cherche un Windows francais 2008
@@ -125,7 +126,8 @@ function get_marque {
 	;;
 	
 	SunOS )
-	    MARQUE=`cat "$@" | grep -i '/usr/sbin/prtconf' -A1 | tail -1 | cut -d':' -f2 |  sed 's/^ *//g' | head -1`
+	    # MARQUE=`cat "$@" | grep -i '/usr/sbin/prtconf' -A1 | tail -1 | cut -d':' -f2 |  sed 's/^ *//g' | head -1`
+	    MARQUE=$(cat "$@" | grep -i 'System Configuration:' | cut -d':' -f2 |  sed 's/^ *//g' | head -1)
 	;;
 
 	* )
@@ -140,8 +142,9 @@ function get_modele {
 	    SunOS )
 		# modele pour SunOS
 		MODEL=`cat "$@" | grep -i '/usr/sbin/prtdiag' -A1 | tail -1 | cut -d':' -f2 |  sed 's/^ *//g' | head -1`
-		# cette information n'as pas d'intérêt dans le cas des serveurs SUN
-		# MODEL="NA"
+                # si la commande retourne : prtdiag can only be run in the global zone alors mod¿le non disponible
+                if [ $(echo "$MODEL" | grep -o "prtdiag") ] ; then MODEL="NA"; fi
+                if [ $(echo "$MODEL" | grep -o "xv") ] ; then MODEL="NA"; fi
 	    ;;
 		
 	    Linux )
@@ -355,7 +358,21 @@ function get_core_number {
 			    (( NB_COEURS_TOTAL = NB_COEURS_TOTAL + n ))
 			    # NB_COEURS_TOTAL=$(expr ${NB_COEURS_TOTAL} + $n)
 			done < /tmp/SunOS.tmp
-			# NB_COEURS=`cat "$@" | grep "^The physical processor has" | head -1 | egrep -o '[0-9]' | head -1`
+                        # ajout pour test
+			# la commande suivante retourne le nomnre de thread par coeur.
+                        # NB_CPUS_INSTANCES=`cat "$@" | grep "cpus, instance #" | wc -l`
+
+			# la commande suivante retourne le nombre de Processeurs disponibles en prenant en compte les threads
+                        NB_CPU_SYSID=`cat "$@" | egrep "cpu.sys_id|cpu \(driver not attached\)" | wc -l`
+                        # la commande suivante retourne le nombre de processeurs on-line : seulement les cores pas de threads
+			# c est cette valeur qui va être utilisée pour compter les processeurs à licencier
+			NB_CPU_ONLINE=`cat "$@" | grep "core_id " | awk '{ print $2 }' | sort -u | wc -l`
+
+			NB_COEURS_TOTAL=$NB_CPU_ONLINE
+
+                        # NB_THREAD_PAR_COEUR=`cat "$@" | egrep -i "^Status of processor|^The physical processor has|^Le processeur physique a" | wc -l`
+                        # NB_CPU_ONLINE=`cat "$@" | grep "core_id" | awk '{ print $4 }' | grep "on-line" | wc -l`
+
 		;;
 		
 		Linux )

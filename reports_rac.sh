@@ -77,26 +77,25 @@ if [ "$RESULT" != "" ]; then
 
 	# ---- Les serveurs OS == 'AIX' :
 	export SELECT="distinct 
-	c.physical_server 'Physical Server',
-	c.Host_Name 'Host Name',
-	r.node_name 'Node name',
+	b.physical_server 'Physical Server',
+	b.Host_Name 'Host Name',
+	c.node_name 'Node name',
 	if(locate('Enterprise', banner)>0, 'Enterprise', 'Standard') Edition,
 	-- c.Model,
-	c.OS,
-	c.Processor_Type 'Proc Type',
-	c.Partition_Type 'Partition Type',
-	c.Partition_Mode 'Partition Mode',
-	c.Entitled_Capacity 'EC',
-	c.Active_CPUs_in_Pool 'ACiP',
-	c.Online_Virtual_CPUs 'OVC',
-	c.Active_Physical_CPUs 'APC',
-	c.Core_Count ,
-	c.Core_Factor ,
-	c.CPU_Oracle"
+	b.OS,
+	b.Processor_Type 'Proc Type',
+	b.Partition_Type 'Partition Type',
+	b.Partition_Mode 'Partition Mode',
+	b.Entitled_Capacity 'EC',
+	b.Active_CPUs_in_Pool 'ACiP',
+	b.Online_Virtual_CPUs 'OVC',
+	b.Active_Physical_CPUs 'APC',
+	b.Core_Count ,
+	b.Core_Factor"
 
-	export FROM="$tCPU c left join $tRAC r left join $tVersion v on r.node_name=v.host_name on c.host_name=r.node_name"
-	export WHERE="r.nodes_count > 1 and c.os like '%AIX%'"
-	export ORDERBY="c.physical_server, r.database_name, r.node_name, r.rac_instance"
+	export FROM="$tCPU b left join $tRAC c left join $tVersion a on c.node_name=a.host_name on b.host_name=c.node_name"
+	export WHERE="c.nodes_count > 1 and b.os like '%AIX%'"
+	export ORDERBY="b.physical_server, c.database_name, c.node_name, c.rac_instance"
 	# export ORDERBY="r.database_name, r.rac_instance, r.node_name, c.physical_server"
 
 	SQL="select $SELECT from $FROM where $WHERE order by $ORDERBY;"
@@ -105,6 +104,9 @@ if [ "$RESULT" != "" ]; then
 	if [ "$RESULT" != "" ]; then
 		if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 		mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
+	
+		# export des données
+		export_to_xml
 
 		# Option RAC : calcul des processeurs
 		# export FROM="$tDB d left join $tCPU c on d.HOST_NAME=c.Host_Name"

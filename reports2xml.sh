@@ -211,7 +211,7 @@ fi
 # Bases de données en Enterprise Edition
 #--------------------------------------------------------------------------------#
 
-#--------- liste des serveurs avec une instance en SE
+#--------- liste des serveurs avec une instance en EE
 export SELECT_EE="distinct c.physical_server, v.Host_Name, v.instance_name, c.OS, c.Processor_Type, v.banner "
 export FROM="$tVersion v left join $tCPU c on v.HOST_NAME=c.Host_Name "
 export WHERE="v.banner like '%Enterprise%' and v.banner not like '%Personal%' and v.banner not like '%Express%' "
@@ -255,8 +255,8 @@ if [ "$RESULT" != "" ]; then
 
     #--------- Calcul des processeurs : OS = AIX
     # SELECT_EE_AIX définie plus haut
-    export FROM="$tVersion v left join $tCPU c on v.HOST_NAME=c.Host_Name "
-    export WHERE="v.banner like '%Enterprise%' and v.banner not like '%Personal%' and v.banner not like '%Express%' and c.os like '%AIX%' "
+    export FROM="$tVersion a left join $tCPU c on a.HOST_NAME=c.Host_Name "
+    export WHERE="a.banner like '%Enterprise%' and a.banner not like '%Personal%' and a.banner not like '%Express%' and c.os like '%AIX%' "
 
     export SQL="select $SELECT_EE_AIX from $FROM where $WHERE order by $ORDERBY ;"
 
@@ -272,7 +272,7 @@ if [ "$RESULT" != "" ]; then
         print_proc_oracle_aix $SELECT_EE_AIX'|'$FROM'|'$WHERE
 
         #--------- insertion des données de la requête dans le fichier XML
-        export_to_xml
+        # export_to_xml
     fi
 
     # fermeture de la feuille

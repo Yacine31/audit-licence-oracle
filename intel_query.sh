@@ -23,15 +23,21 @@ if [[ "$@" == "" ]]; then usage; exit 1; fi
 # la chaine de caractère en entrée ressemble généralement à 
 # Intel(R) Xeon(R) CPU E5420 @ 2.50GHz
 # on va extraire le 4ème champs
-proc=$(echo "$@" | cut -d' ' -f4)
+# proc=$(echo "$@" | cut -d' ' -f4)
+proc=$(echo "$@" | tr ' ' '_')
 
 # requête auprès du serveur intel
-wget -q http://ark.intel.com/search?q=$proc -O $proc.html > /dev/null
+wget -q http://ark.intel.com/search?q=${proc} -O ${proc}.html > /dev/null
 
 # conversion du html en text et recherche des mots Cores et Thread
-html2text $proc.html > $proc.txt
-nb_coeurs=$(grep '# of Cores' $proc.txt  | egrep -o '([0-9])+$')
-nb_threads=$(grep '# of Threads' $proc.txt  | egrep -o '([0-9])+$')
+html2text ${proc}.html > ${proc}.txt
+
+# set -xv
+# cat ${proc}.txt | egrep '# of Cores|Family|Compare Intel'
+# set +xv
+
+nb_coeurs=$(grep '# of Cores' ${proc}.txt  | egrep -o '([0-9])+$')
+nb_threads=$(grep '# of Threads' ${proc}.txt  | egrep -o '([0-9])+$')
 
 if [[ ("$nb_coeurs" != "") ]]; then
 	out="Processeur $proc : ($nb_coeurs) coeurs par socket"

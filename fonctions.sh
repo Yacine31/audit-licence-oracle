@@ -18,7 +18,7 @@ MYSQL_PWD="root"
 export ORDERBY="c.physical_server, d.host_name"
 
 export SELECT_EE_AIX="distinct c.physical_server,
-v.Host_Name Host,
+a.Host_Name Host,
 -- c.Model,
 -- c.OS,
 c.Processor_Type ,
@@ -30,8 +30,8 @@ c.Active_CPUs_in_Pool ACiP,
 c.Online_Virtual_CPUs OVC,
 c.Active_Physical_CPUs APC,
 Core_Count,
-Core_Factor,
-CPU_Oracle
+Core_Factor
+-- CPU_Oracle
 "
 
 export SELECT_EE_NON_AIX="distinct
@@ -86,24 +86,30 @@ drop table  if exists proc_oracle;
 create table proc_oracle as
 select
     r.physical_server,
-    sum(r.CPU_Oracle) 'Total_Proc',
+    if(sum(r.Core_Count)<r.Active_Physical_CPUs,sum(r.Core_Count),r.Active_Physical_CPUs) 'Total_Cores',
     r.Core_Factor,
-    r.Active_Physical_CPUs,
-    if (sum(r.CPU_Oracle)<r.Active_Physical_CPUs,sum(r.CPU_Oracle),r.Active_Physical_CPUs) 'Proc_Oracle_Calcules'
+    r.Active_Physical_CPUs 
 from
-(select distinct physical_server, v.host_name, Partition_Mode,
+(select distinct physical_server, a.host_name, Partition_Mode,
 Partition_Type, Active_Physical_CPUs, Entitled_Capacity, Active_CPUs_in_Pool, Online_Virtual_CPUs, Processor_Type,
-Core_Count, Core_Factor, CPU_Oracle
+Core_Count, Core_Factor
 from $FROM where $WHERE
 order by PHYSICAL_SERVER) r
 group by physical_server;
 
-select * from proc_oracle;"
+select *, ceiling(Total_Cores * Core_Factor) 'Proc_Oracle_Calcules' from proc_oracle;"
+
+# echo ==========
+# echo $SQL
+# echo ==========
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
 
-export SQL="select sum(Proc_Oracle_Calcules) from proc_oracle"
+# insertion des données de la requête dans le fichier XML
+export_to_xml
+
+export SQL="select sum(ceiling(Total_Cores * Core_Factor)) 'Sum_Proc_Oracle' from proc_oracle"
 
 if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 echo "Somme des processeurs Oracle pour les serveurs AIX :" $(mysql -s -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL")

@@ -102,14 +102,14 @@ if [ "$RESULT" != "" ]; then
 		create table proc_oracle as
 		select
 		    r.physical_server,
-		    sum(r.CPU_Oracle) 'Total_Proc',
+		    @Proc_Oracle_Calcules:=if(ceiling(sum(r.Core_Count))<r.Active_Physical_CPUs,ceiling(sum(r.Core_Count)),r.Active_Physical_CPUs) 'Proc_Oracle_Calcules',
 		    r.Core_Factor,
 		    r.Active_Physical_CPUs,
-		    if (sum(r.CPU_Oracle)<r.Active_Physical_CPUs,sum(r.CPU_Oracle),r.Active_Physical_CPUs) 'Proc_Oracle_Calcules'
+		    @Proc_Oracle_Calcules * r.Core_Factor 'Total_Proc'
 		from
 		(select distinct physical_server, d.host_name, Partition_Mode,
 		Partition_Type, Active_Physical_CPUs, Entitled_Capacity, Active_CPUs_in_Pool, Online_Virtual_CPUs, Processor_Type,
-		Core_Count, Core_Factor, CPU_Oracle
+		Core_Count
 		from $tVersion v, $tDataMining d left join $tCPU c on d.host_name=c.host_name 
 		where d.host_name=v.host_name and d.instance_name=v.instance_name
 		and count_nbr not in ('0','-942') 

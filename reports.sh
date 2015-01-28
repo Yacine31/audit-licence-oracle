@@ -69,7 +69,7 @@ select
         sum(CPU_Oracle) 'Total_Proc',
 	Core_Factor,
         Active_Physical_CPUs,
-        if (sum(CPU_Oracle)<Active_Physical_CPUs,sum(CPU_Oracle),Active_Physical_CPUs) 'Proc_Oracle_Calcules'
+        if (ceiling(sum(CPU_Oracle))<Active_Physical_CPUs,ceiling(sum(CPU_Oracle)),Active_Physical_CPUs) 'Proc_Oracle_Calcules'
 from $tCPUAIX
 group by physical_server;
 
@@ -125,7 +125,7 @@ select
         sum(CPU_Oracle) 'Total_Proc',
 	Core_Factor,
         Active_Physical_CPUs,
-        if (sum(CPU_Oracle)<Active_Physical_CPUs,sum(CPU_Oracle),Active_Physical_CPUs) 'Proc_Oracle_Calcules'
+        if (ceiling(sum(CPU_Oracle))<Active_Physical_CPUs,ceiling(sum(CPU_Oracle)),Active_Physical_CPUs) 'Proc_Oracle_Calcules'
 from $tCPUAIX
 group by physical_server;
 
