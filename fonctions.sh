@@ -97,7 +97,8 @@ from $FROM where $WHERE
 order by PHYSICAL_SERVER) r
 group by physical_server;
 
-select *, ceiling(Total_Cores * Core_Factor) 'Proc_Oracle_Calcules' from proc_oracle;"
+select *, Total_Cores * Core_Factor 'Proc_Oracle_Calcules' from proc_oracle;"
+# select *, ceiling(Total_Cores * Core_Factor) 'Proc_Oracle_Calcules' from proc_oracle;"
 
 # echo ==========
 # echo $SQL
