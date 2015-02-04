@@ -41,7 +41,7 @@ function fnAddPrimaryKey {
 	# TODO : ajouter la vérification des paramètres 
 	echo -n "Ajout de la clé primaire ($KEY) à la table $TABLE ... "
 	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
-	ALTER TABLE $TABLE ADD PRIMARY KEY ($KEY);"
+	ALTER TABLE $TABLE ADD PRIMARY KEY ($KEY(200));"
 	echo " terminé"
 
 }
