@@ -104,10 +104,11 @@ function get_os {
 	if [ ! "$OS" ]; then
 		OS=`cat "$@" | grep "^Operating System" -A1 | grep "Caption: " | tr -s ' ' | sed 's/ Caption: //' | sed 's/\\r//'`
 	fi
-	
-	# quelque soit l'OS on prend juste le premier mot (Microsoft souvent suivi de plusieurs informations
-	# OS=$(echo $OS | cut -d' ' -f1)
 
+	# Pour windows on garde juste l'essentiel 
+	if [[ $(echo $OS | egrep -i 'Microsoft|Windows') ]]; then
+	    OS="Microsoft"
+	fi 	
 }
 
 function get_marque {
@@ -250,29 +251,12 @@ function get_sockets_number {
 		;;
 
 		HP-UX )
-			# NB_SOCKETS : HP-UX
-			if [ "$OS" == "HP-UX" ]; then 
-				# si ia64 on applique cette formule :
-				v_ia64=`echo $MODEL | grep 'ia64'`
-				if [ "$v_ia64" ]; then 
-					NB_SOCKETS=`cat "$@" | grep '^CPU info:' -A1 | tail -1 | tr -s ' '`
-					NB_SOCKETS=${NB_SOCKETS:1:1}
-				else
-					NB_SOCKETS=`cat "$@" |  grep '^processor' | wc -l`
-				fi
-				# si release  B.11.23 alors c est cette commande
-				if [ "$RELEASE" == "B.11.23" ]; then
-					NB_SOCKETS=`cat "$@" | grep 'Number of enabled sockets =' | cut -d'=' -f2 | sed 's/^ *//g'`
-					# NB_SOCKETS=`cat "$@" | grep "^+ /usr/contrib/bin/machinfo" -A6 | tail -1 | egrep -o [0-9]`
-				fi
-			fi
+			NB_SOCKETS="ND"
 		;;
 
 		AIX )
 			# nombre de processeurs et coeurs pour AIX
-			if [ "$OS" == "AIX" ]; then
-				NB_SOCKETS=`cat "$@" | egrep -i '^Number Of Processors:|^Nombre de processeurs' | tail -1 | cut -d':' -f2 | tr -d ' '`
-			fi
+			NB_SOCKETS=`cat "$@" | egrep -i '^Number Of Processors:|^Nombre de processeurs' | tail -1 | cut -d':' -f2 | tr -d ' '`
 		;;
 
 		SunOS )
@@ -310,83 +294,79 @@ function get_core_number {
 	fi
 
 	case $OS in 
-		*Microsoft* )
-		    # cette chaine retourne le nombre de coeurs ou "PATCH" pour PATCH NOT AVAILABLE
-		    NB_COEURS=$(cat "$@" | grep -v objTextFile.WriteLine | grep -i 'CPU NumberOfCores:' | awk '{ print $3 }' | head -1)
-		    
-		    if [ $NB_COEURS == "PATCH" ] 
-		    then
-			# si $NB_COEURS="PATH", alors la valeur de NumberOfProcessors = nombre de coeurs ou nb_coeurs * 2 si processeur multithreadé
-			NB_COEURS="ND PATCH ERROR" 
-			NB_SOCKETS="ND PATCH ERROR"
-			NB_COEURS_TOTAL=$(cat "$@" | grep -v objTextFile.WriteLine | grep -i 'NumberOfProcessors:' | grep -o '[0-9]*')
-		    else
-			# Si NB_COEURS retourne un entier au lieu de PATCH EROOR, alors :
-			NB_SOCKETS=$(cat "$@" | grep -v objTextFile.WriteLine | grep -i 'NumberOfProcessors:' | grep -o '[0-9]*')
-			NB_COEURS=$(cat "$@" | grep -v objTextFile.WriteLine | grep -i 'CPU NumberOfCores:' | head -1 | grep -o '[0-9]*')
-			if [[ "$NB_COEURS" && "$NB_SOCKETS" ]]
-			    then NB_COEURS_TOTAL=$(expr $NB_SOCKETS \* $NB_COEURS)
-			fi
-		    fi
-		    # NB_COEURS_TOTAL=`cat "$@" | grep '\\CentralProcessor\\' | wc -l`
-		;;
+	*Microsoft* )
+	    # cette chaine retourne le nombre de coeurs ou "PATCH" pour PATCH NOT AVAILABLE
+	    NB_COEURS=$(cat "$@" | grep -v objTextFile.WriteLine | grep -i 'CPU NumberOfCores:' | awk '{ print $3 }' | head -1)
+	    
+	    if [ $NB_COEURS == "PATCH" ] 
+	    then
+		# si $NB_COEURS="PATH", alors la valeur de NumberOfProcessors = nombre de coeurs ou nb_coeurs * 2 si processeur multithreadé
+		NB_COEURS="ND PATCH ERROR" 
+		NB_SOCKETS="ND PATCH ERROR"
+		NB_COEURS_TOTAL=$(cat "$@" | grep -v objTextFile.WriteLine | grep -i 'NumberOfProcessors:' | grep -o '[0-9]*')
+	    else
+		# Si NB_COEURS retourne un entier au lieu de PATCH EROOR, alors :
+		NB_SOCKETS=$(cat "$@" | grep -v objTextFile.WriteLine | grep -i 'NumberOfProcessors:' | grep -o '[0-9]*')
+		NB_COEURS=$(cat "$@" | grep -v objTextFile.WriteLine | grep -i 'CPU NumberOfCores:' | head -1 | grep -o '[0-9]*')
+		if [[ "$NB_COEURS" && "$NB_SOCKETS" ]]
+		    then NB_COEURS_TOTAL=$(expr $NB_SOCKETS \* $NB_COEURS)
+		fi
+	    fi
+	    # NB_COEURS_TOTAL=`cat "$@" | grep '\\CentralProcessor\\' | wc -l`
+	;;
 
-		HP-UX )
-			# si release  B.11.23 alors c est cette commande
-			if [ "$RELEASE" == "B.11.23" ]; then
-				NB_COEURS=`cat "$@" | grep 'Cores per socket =' | cut -d'=' -f2 | sed 's/^ *//g'`
-				# NB_COEURS=`cat "$@" | grep "^+ /usr/contrib/bin/machinfo" -A7 | tail -1 | awk '{print $1}'`
-				# NB_COEURS_TOTAL marche pour toutes les versions Unix, 
-				export NB_COEURS_TOTAL=`expr $NB_COEURS \* $NB_SOCKETS`
-				# pas besoin de cette commande specifique
-				# NB_COEURS_TOTAL=`cat "$@" | grep 'Number of enabled CPUs' | cut -d'=' -f2 | sed 's/^ *//g'`
-			fi
-		;;
+	HP-UX )
+	    # pour HP-UX c'est toujours le nombre de coeurs total 
+	    # qui est disponible via le nombre de ligne qui suivent la commande /usr/sbin/ioscan -fkC processor
+	    # le nombre de socket et de core par socket n'est pas disponible
+	    NB_COEURS='ND'
+	    NB_COEURS_TOTAL=$(cat "$@" | sed -n "/ioscan/,/getconf/p" | grep -i "^processor" | wc -l)
+	    ;;
 
-		AIX )
-			# pour AIX en general ce sont des partitions LPAR, voir les parametres supplementaires
-			NB_COEURS="ND AIX"
-		;;
+	AIX )
+		# pour AIX en general ce sont des partitions LPAR, voir les parametres supplementaires
+		NB_COEURS="ND AIX"
+	;;
 
-		SunOS )
-			NB_COEURS="ND SunOS"
-			NB_COEURS_TOTAL=0
-			# cat "$@" | egrep "^The physical processor has|^Le processeur physique a" | egrep -o ' [0-9] ' > /tmp/SunOS.tmp
-			cat "$@" | egrep -o "physical processor has [0-9]+ |processeur physique a [0-9]+ " | egrep -o ' [0-9]+ ' > /tmp/SunOS.tmp
-			while read n
-			do
-			    (( NB_COEURS_TOTAL = NB_COEURS_TOTAL + n ))
-			    # NB_COEURS_TOTAL=$(expr ${NB_COEURS_TOTAL} + $n)
-			done < /tmp/SunOS.tmp
-                        # ajout pour test
-			# la commande suivante retourne le nomnre de thread par coeur.
-                        # NB_CPUS_INSTANCES=`cat "$@" | grep "cpus, instance #" | wc -l`
+	SunOS )
+		NB_COEURS="ND SunOS"
+		NB_COEURS_TOTAL=0
+		# cat "$@" | egrep "^The physical processor has|^Le processeur physique a" | egrep -o ' [0-9] ' > /tmp/SunOS.tmp
+		cat "$@" | egrep -o "physical processor has [0-9]+ |processeur physique a [0-9]+ " | egrep -o ' [0-9]+ ' > /tmp/SunOS.tmp
+		while read n
+		do
+		    (( NB_COEURS_TOTAL = NB_COEURS_TOTAL + n ))
+		    # NB_COEURS_TOTAL=$(expr ${NB_COEURS_TOTAL} + $n)
+		done < /tmp/SunOS.tmp
+                # ajout pour test
+		# la commande suivante retourne le nomnre de thread par coeur.
+                # NB_CPUS_INSTANCES=`cat "$@" | grep "cpus, instance #" | wc -l`
 
-			# la commande suivante retourne le nombre de Processeurs disponibles en prenant en compte les threads
-                        NB_CPU_SYSID=`cat "$@" | egrep "cpu.sys_id|cpu \(driver not attached\)" | wc -l`
-                        # la commande suivante retourne le nombre de processeurs on-line : seulement les cores pas de threads
-			# c est cette valeur qui va être utilisée pour compter les processeurs à licencier
-			NB_CPU_ONLINE=`cat "$@" | grep "core_id " | awk '{ print $2 }' | sort -u | wc -l`
+		# la commande suivante retourne le nombre de Processeurs disponibles en prenant en compte les threads
+                NB_CPU_SYSID=`cat "$@" | egrep "cpu.sys_id|cpu \(driver not attached\)" | wc -l`
+                # la commande suivante retourne le nombre de processeurs on-line : seulement les cores pas de threads
+		# c est cette valeur qui va être utilisée pour compter les processeurs à licencier
+		NB_CPU_ONLINE=`cat "$@" | grep "core_id " | awk '{ print $2 }' | sort -u | wc -l`
 
-			NB_COEURS_TOTAL=$NB_CPU_ONLINE
+		NB_COEURS_TOTAL=$NB_CPU_ONLINE
 
-                        # NB_THREAD_PAR_COEUR=`cat "$@" | egrep -i "^Status of processor|^The physical processor has|^Le processeur physique a" | wc -l`
-                        # NB_CPU_ONLINE=`cat "$@" | grep "core_id" | awk '{ print $4 }' | grep "on-line" | wc -l`
+                # NB_THREAD_PAR_COEUR=`cat "$@" | egrep -i "^Status of processor|^The physical processor has|^Le processeur physique a" | wc -l`
+                # NB_CPU_ONLINE=`cat "$@" | grep "core_id" | awk '{ print $4 }' | grep "on-line" | wc -l`
 
-		;;
-		
-		Linux )
-			# pour linux les infos sont dans le fichier après la commande dmidecode --type processor
-			NB_COEURS=`cat "$@" | grep "^cpu cores" | sort | uniq | cut -d':' -f2 | egrep -o '[0-9]'`
-			if [[ "$NB_COEURS" && "$NB_SOCKETS" ]]
-			    then NB_COEURS_TOTAL=$(expr $NB_SOCKETS \* $NB_COEURS)
-			fi
-		;;
+	;;
+	
+	Linux )
+		# pour linux les infos sont dans le fichier après la commande dmidecode --type processor
+		NB_COEURS=`cat "$@" | grep "^cpu cores" | sort | uniq | cut -d':' -f2 | egrep -o '[0-9]'`
+		if [[ "$NB_COEURS" && "$NB_SOCKETS" ]]
+		    then NB_COEURS_TOTAL=$(expr $NB_SOCKETS \* $NB_COEURS)
+		fi
+	;;
 
-		* )
-			NB_COEURS="OS NOT DEF."
-			NB_COEURS_TOTAL="OS NOT DEF."
-		;;
+	* )
+		NB_COEURS="OS NOT DEF."
+		NB_COEURS_TOTAL="OS NOT DEF."
+	;;
 	esac
 }
 
@@ -452,7 +432,7 @@ function get_virtuel {
 
 	# ensuite on regarde le cas de certains OS
 	case $OS in
-		AIX* )
+		AIX )
 			#---
 			# pour les serveurs AIX on regarde le type de la partition 
 			#---
@@ -461,7 +441,15 @@ function get_virtuel {
 				VIRTUEL="TRUE"
 				PHYSICAL_SERVER=$Machine_Serial_Number
 			# fi
-			;;
+		;;
+
+		SunOS )
+		    if [[ $(echo $MODEL | grep -i VMware) ]]; then 
+			VIRTUEL="TRUE"
+			PHYSICAL_SERVER="VMWARE"
+		    fi
+		;;
+
 		* )
 			#---
 			# pour la virtualisation VMware, on regarde la marque 
@@ -471,7 +459,7 @@ function get_virtuel {
 				VIRTUEL="TRUE"
 				PHYSICAL_SERVER="VMWARE"
 			fi
-			;;
+		;;
 	esac
 }
 
@@ -497,8 +485,8 @@ do
 	get_hostname "$f"
 	get_os "$f"
 	get_marque "$f"
-	get_virtuel "$f"
 	get_modele "$f"
+	get_virtuel "$f"
 	get_processor_type "$f"
 	get_sockets_number "$f"
 	get_core_number "$f"
