@@ -60,7 +60,7 @@ if [ "$RESULT" != "" ]; then
 	#-------------------------------------------------------------------------------
 
 
-	export SQL="select distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, c.Total_Cores, '' as Core_Factor, '' as Proc_Oracle
+	export SQL="select distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, c.Total_Cores, Core_Factor, Total_Cores*Core_Factor as Proc_Oracle
 	from $tVersion a, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
 	where d.host_name=a.host_name and d.instance_name=a.instance_name
 	and name in ($DIAG_PACK_FEATURES)

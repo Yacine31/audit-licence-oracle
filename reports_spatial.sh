@@ -82,7 +82,7 @@ if [ "$RESULT" != "" ]; then
 
 
 	export SQL="select distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket,
-	 c.Total_Cores, '' as Core_Factor, '' as Proc_Oracle
+	 c.Total_Cores, Core_Factor, Total_Cores*Core_Factor as Proc_Oracle
 	from $tVersion v, $tVoption o, $tSpatial s left join $tCPU c on s.host_name=c.host_name 
 	where o.host_name=v.host_name and o.instance_name=v.instance_name
 	and o.parameter='Spatial'

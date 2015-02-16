@@ -58,7 +58,7 @@ if [ "$RESULT" != "" ]; then
 	export_to_xml
 
 	#--------- Calcul des processeurs : OS != AIX
-	export SELECT_NON_AIX="distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, c.Total_Cores, '' as Core_Factor, '' as Proc_Oracle"
+	export SELECT_NON_AIX="distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, c.Total_Cores, Core_Factor, Total_Cores*Core_Factor as Proc_Oracle"
 	export FROM="$tCPU c left join $tRAC r left join $tVersion v on r.node_name=v.host_name on c.host_name=r.node_name"
 	export WHERE="r.nodes_count > 1 and c.os not like '%AIX%'"
 	export ORDERBY="c.physical_server"

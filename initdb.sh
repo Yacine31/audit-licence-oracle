@@ -100,7 +100,7 @@ fnAddPrimaryKey $TABLE $KEY
 # creation de la table pour les données serveurs
 TABLE=$1"_cpu"
 HEADER="PHYSICAL_SERVER,Host_Name,OS,Marque,Model,Virtuel,Processor_Type,Socket,Cores_per_Socket,Total_Cores,"
-HEADER=$HEADER"Node_Name,Partition_Name,Partition_Number,Partition_Type,Partition_Mode,Entitled_Capacity,Active_CPUs_in_Pool,Online_Virtual_CPUs,Machine_Serial_Number,Active_Physical_CPUs"
+HEADER=$HEADER"Node_Name,Partition_Name,Partition_Number,Partition_Type,Partition_Mode,Entitled_Capacity,Active_CPUs_in_Pool,Shared_Pool_ID,Online_Virtual_CPUs,Machine_Serial_Number,Active_Physical_CPUs"
 fnCreateTable $TABLE $HEADER
 
 # ajout de la clé primaire sur cette table HOST_NAME

@@ -47,6 +47,8 @@ export tDataMining=$PROJECT_NAME"_data_mining"    # table avec les paramètres v
 # - Core_factor : 0,75 ou 1 en fonction du Proc
 # - CPU_Oracle : égale Core_Count * Core_Factore 
 #--------------------------------------------------------------------------------#
+
+
 SQL="drop table if exists ${tCPU}_tmp;
 create table ${tCPU}_tmp as 
     select *,
@@ -74,6 +76,8 @@ mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$
 # c'est cette table qui va remplacer la table cpu dans la suite du rapport
 
 export tCPU=${tCPU}_tmp
+
+update_core_factor $tCPU
 
 #--------------------------------------------------------------------------------#
 # debut du traitement et initialisation du fichier XML
@@ -237,7 +241,7 @@ if [ "$RESULT" != "" ]; then
     export_to_xml
 
     #--------- Calcul des processeurs : OS != AIX
-    export SELECT_NON_AIX="distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, c.Total_Cores, '' as Core_Factor, '' as Proc_Oracle"
+    export SELECT_NON_AIX="distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, c.Total_Cores, Core_Factor, Total_Cores*Core_Factor as Proc_Oracle"
     export WHERE="v.banner like '%Enterprise%' and v.banner not like '%Personal%' and v.banner not like '%Express%' and c.os not like '%AIX%' "
     export ORDERBY="c.physical_server, c.Host_Name, c.os"
     
@@ -263,7 +267,8 @@ if [ "$RESULT" != "" ]; then
     RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
     if [ "$RESULT" != "" ]; then
         if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
-        echo "Caractéristiques des serveurs AIX, la colonne CPU_Oracle correspond au nombre de processeurs Oracle retenus"
+        echo "Caractéristiques des serveurs AIX : "
+        echo "EC = Entitled Capacity, ACiP = Active CPUs in Pool, PoolID = Shared Pool ID, OVC = Online Virtual CPU, APC = Active Physical CPUs"
         mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
 
         # export des données

@@ -42,7 +42,7 @@ if [ "$RESULT" != "" ]; then
 	#--- tableau pour le calcul des processeurs, serveurs non AIX
 	#--------------------------------------------------------------------------------#
 
-	export SQL="select distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, c.Total_Cores, '' as Core_Factor, '' as Proc_Oracle
+	export SQL="select distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, c.Total_Cores, Core_Factor, Total_Cores*Core_Factor as Proc_Oracle
 	from $tOLAP o left join $tCPU c on o.host_name=c.host_name
 	where c.os not like '%AIX%' and owner != 'SYS' and count_nbr not in ('','0','-942')
 	group by c.physical_server
