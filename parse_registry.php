@@ -73,6 +73,13 @@ foreach($files as $file){
 		foreach($xml->{'migratable-target'} as $migratable){
 		//    print $migratable->name . "\t" . $migratable->cluster . "\n";
 		}
+		// on recherhce si WLDF est actif, valeur autre que NONE implique EE
+		if ($xml->server->{'server-diagnostic-config'}){
+			print "--------\n";
+			print "Si WLDF est autre que NONE, alors EE \n";
+			print "--------\n";
+			print "wldf-diagnostic-volume = " . $xml->server->{'server-diagnostic-config'}->{'wldf-diagnostic-volume'} . "\n";
+		}
 	    }
 	}
 
