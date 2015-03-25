@@ -31,7 +31,7 @@ if [ "$RESULT" != "" ]; then
 	echo "Liste des serveurs avec option SPATIAL/LOCATOR en Standard Edition"
 	echo "Pour ces serveurs, vérifier si c'est SPATIAL est FALSE c'est donc LOCATOR qui est mis en oeuvre"
 
-	if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+	if [ "$DEBUG" == "1" ]; then echo "[DEBUG $0] - $SQL"; fi
 	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
 	export SHEET_NAME=Locator_SE
@@ -62,7 +62,7 @@ order by physical_server, s.host_name, s.instance_name, s.owner"
 RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 if [ "$RESULT" != "" ]; then
 
-	if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+	if [ "$DEBUG" == "1" ]; then echo "[DEBUG $0] - $SQL"; fi
 	echo "#-------------------------------------------------------------------------------"
 	echo "# Option Spatial/Locator en Enterprise Edition"
 	echo "#-------------------------------------------------------------------------------"
@@ -94,11 +94,28 @@ if [ "$RESULT" != "" ]; then
 	group by c.physical_server
 	order by physical_server" 
 
+        export SELECT_NON_AIX="distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, c.Total_Cores, Core_Factor, Total_Cores*Core_Factor as Proc_Oracle"
+
+	export FROM="$tVersion v, $tVoption o, $tSpatial s left join $tCPU c on s.host_name=c.host_name"
+	export WHERE="o.host_name=v.host_name and o.instance_name=v.instance_name
+	and o.parameter='Spatial'
+	and s.host_name=v.host_name and s.instance_name=v.instance_name
+	and count_nbr not in ('0','-942') 
+	and owner not in ('', 'SYS', 'SYSTEM')
+	and locate('Enterprise', banner) > 0
+	and c.os not like '%AIX%'"
+	export GROUPBY="c.physical_server order by physical_server" 
+
+        SQL="select $SELECT_NON_AIX from $FROM where $WHERE group by $GROUPBY"
+        if [ "$DEBUG" == "1" ]; then echo "[DEBUG - $0 ] - $SQL"; fi
+
 	RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 	if [ "$RESULT" != "" ]; then
-		if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
-		echo "Calcul des processeurs Oracle par serveur physique (OS!=AIX) :"
-		mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
+                # affichage du tableau pour le calcul du nombre de processeur
+                print_proc_oracle $SELECT_NON_AIX'|'$FROM'|'$WHERE
+
+		# echo "Calcul des processeurs Oracle par serveur physique (OS!=AIX) :"
+		# mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
 		# export des données
 		export_to_xml
@@ -134,7 +151,7 @@ if [ "$RESULT" != "" ]; then
 
 	RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 	if [ "$RESULT" != "" ]; then
-		if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+		if [ "$DEBUG" == "1" ]; then echo "[DEBUG $0] - $SQL"; fi
 		mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
 		# export des données

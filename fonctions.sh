@@ -15,7 +15,7 @@ MYSQL_PWD="root"
 #--------------------------------------------------------------------------------#
 # les clauses SQL communes à certaines requêtes :
 #--------------------------------------------------------------------------------#
-export ORDERBY="c.physical_server, d.host_name"
+# export ORDERBY="c.physical_server, d.host_name"
 
 export SELECT_EE_AIX="distinct c.physical_server,
 a.Host_Name Host,
@@ -51,9 +51,20 @@ export WHERE=$(echo $@ | cut -d'|' -f3)
 echo "Calcul des processeurs Oracle par serveur physique (OS!=AIX) :"
 
 #export SQL="select distinct physical_server,Processor_Type,Socket,Cores_per_Socket, '' as 'Total Cores', '' as 'Core Factor', '' as 'Proc Oracle'
-export SQL="select $SELECT from $FROM where $WHERE
+export SQL="
+
+select $SELECT from $FROM where $WHERE
 group by c.physical_server
-order by c.physical_server
+order by c.physical_server;
+
+-- somme des processeurs pour le meme core factor
+select c.core_factor, sum(c.total_cores*c.core_factor) 'Proc Oracle par core factor' from
+(
+select PHYSICAL_SERVER, Total_Cores, Core_Factor
+from $FROM where $WHERE
+group by physical_server
+) c
+group by c.core_factor
 ;"
 
 # echo "FLAG - $SQL"
@@ -61,7 +72,7 @@ order by c.physical_server
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
 
 # insertion des données de la requête dans le fichier XML
-# export_to_xml
+export_to_xml
 }
 
 #--------------------------------------------------------------------------------#
@@ -106,18 +117,17 @@ from proc_oracle
 order by physical_server, Shared_Pool_ID;
 
 select  
-    ceiling(sum(if(Total_Cores<Active_CPUs_in_Pool,Total_Cores,Active_CPUs_in_Pool) * Core_Factor)) Total_Proc,
-    Core_Factor
+    Core_Factor,
+    sum(if(Total_Cores<Active_CPUs_in_Pool,Total_Cores,Active_CPUs_in_Pool) * Core_Factor) 'Proc Oracle par core factor'
 from proc_oracle 
 group by Core_Factor
 ;"
-# select *, ceiling(Total_Cores * Core_Factor) 'Proc_Oracle_Calcules' from proc_oracle;"
 
 # echo ==========
 # echo $SQL
 # echo ==========
 
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+if [ "$DEBUG" == "1" ]; then echo "[DEBUG $0] - $SQL"; fi
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
 
 # insertion des données de la requête dans le fichier XML
@@ -130,7 +140,7 @@ from proc_oracle
 group by Core_Factor
 "
 
-if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+if [ "$DEBUG" == "1" ]; then echo "[DEBUG $0] - $SQL"; fi
 # echo "Somme des processeurs Oracle pour les serveurs AIX :" $(mysql -s -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL")
 
 # insertion des données de la requête dans le fichier XML
@@ -185,9 +195,7 @@ update $tCPU set core_factor = case
     when upper(processor_type) like '%PA-RISC%' then 0.75
     when upper(processor_type) like '%SPARC64-VI' then 0.75
     when upper(processor_type) like '%SPARC64-VII' then 0.75
-    when upper(processor_type) like '%ULTRASPARC-IIIi' then 0.75
     when upper(processor_type) like '%ULTRASPARC-III+' then 0.75
-    when upper(processor_type) like '%ULTRASPARC-IIIi' then 0.75
     when upper(processor_type) like '%ULTRASPARC-IV' then 0.75
     when upper(processor_type) like '%ULTRASPARC-IV+' then 0.75
     when upper(processor_type) like '%ULTRASPARC-VI' then 0.75
@@ -199,9 +207,14 @@ update $tCPU set core_factor = case
     when upper(processor_type) like '%POWER%7%' then 1 
     when upper(processor_type) like '%POWER%8%' then 1
     when upper(processor_type) like '%ITANIUM%95%' then 1
-
-    -- processeur inconnu pour l'instant
+    when upper(processor_type) like '%ULTRASPARC-IIi' then 1
+    when upper(processor_type) like '%ULTRASPARC-III' then 1
+    when upper(processor_type) like '%ULTRASPARC-IIIi' then 1
     when upper(processor_type) like 'SPARC64-V' then 1
+    when upper(processor_type) like 'SPARC64-GP' then 1
+
+    -- pour tous les autres, c est coef 1
+    else 1
 
 end; 
 "

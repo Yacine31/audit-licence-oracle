@@ -247,6 +247,29 @@ function fnDataMining {
 	# rm -f $TMPFILE
 }
 
+function fnAdvancedCompression {
+	# insertion de toutes les lignes qui proviennent de options.csv ds la tables _adv_compression
+	        SRCFILE="*options.csv"
+        TABLE=$1"_adv_compression"
+        TMPFILE="/tmp/adv_compression"
+
+        echo -n "Insertion des données advanced compression depuis les fichiers XXX_YYY_options.csv vers la table $TABLE : "
+        rm -f $TMPFILE 2>/dev/null
+        find -type f -iname "$SRCFILE" | while read f
+        do
+                echo -n "."
+		# on ne prend pas les lignes avec count=0 ou -942 (ORA-00942: table or view does not exist)
+		cat "$f" | grep '^GREPME' | grep ",ADVANCED_COMPRESSION," | egrep -v ",-942,|,0," >> $TMPFILE
+        done
+        echo ""
+
+        mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "
+        load data local infile '$TMPFILE' into table $TABLE fields terminated by '$DELIM' ;"
+        # rm -f $TMPFILE
+
+}
+
+fnAdvancedCompression $1
 fnDataMining $1
 fnvoption $1
 fnPart $1

@@ -157,3 +157,11 @@ fnCreateTable $TABLE $HEADER
 # ajout de la clé primaire sur cette table 
 KEY=HOST_NAME,INSTANCE_NAME,Owner,Model_Name
 fnAddPrimaryKey $TABLE $KEY
+
+
+# creation de la table pour les données Advanced Compression
+TABLE=$1"_adv_compression"
+HEADER="GREPME,Host_Name,Instance_Name,Sysdate,Host_name_2,Db_Name,Advanced_Compression,Table_Compression,Count_Nbr,Count_Txt,dba_tables,"
+HEADER=$HEADER"table_Owner,table_name,partition_name,compression,compression_for"
+fnCreateTable $TABLE $HEADER
+

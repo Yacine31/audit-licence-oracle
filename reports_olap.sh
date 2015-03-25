@@ -42,18 +42,20 @@ if [ "$RESULT" != "" ]; then
 	#--- tableau pour le calcul des processeurs, serveurs non AIX
 	#--------------------------------------------------------------------------------#
 
-	export SQL="select distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, c.Total_Cores, Core_Factor, Total_Cores*Core_Factor as Proc_Oracle
-	from $tOLAP o left join $tCPU c on o.host_name=c.host_name
-	where c.os not like '%AIX%' and owner != 'SYS' and count_nbr not in ('','0','-942')
-	group by c.physical_server
-	order by physical_server" 
+	
+	export SELECT_NON_AIX="distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, c.Total_Cores, Core_Factor, Total_Cores*Core_Factor as Proc_Oracle"
+	export FROM="$tOLAP o left join $tCPU c on o.host_name=c.host_name"
+	export WHERE=" c.os not like '%AIX%' and owner != 'SYS' and count_nbr not in ('','0','-942')"
+        export GROUPBY="c.physical_server"
+        export ORDERBY="c.physical_server"
 
-	RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
+
+        SQL="select $SELECT_NON_AIX from $FROM where $WHERE group by $GROUPBY order by $ORDERBY"
+        if [ "$DEBUG" == "1" ]; then echo "[DEBUG - $0 ] - $SQL"; fi
+
 	if [ "$RESULT" != "" ]; then
-		if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
-		echo "Calcul des processeurs Oracle par serveur physique (OS=AIX) :"
-		mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
-
+                # affichage du tableau pour le calcul du nombre de processeur
+                print_proc_oracle $SELECT_NON_AIX'|'$FROM'|'$WHERE
 
 		# export des données
 		export_to_xml

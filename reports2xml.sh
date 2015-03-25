@@ -38,6 +38,7 @@ export tOLAP=$PROJECT_NAME"_olap"    # table avec les données OLAP
 export tSpatial=$PROJECT_NAME"_spatial"    # table avec les données SPATIAL/LOCATOR
 export tVoption=$PROJECT_NAME"_v_option"    # table avec les paramètres v_option
 export tDataMining=$PROJECT_NAME"_data_mining"    # table avec les paramètres v_option
+export tAdvCompression=$PROJECT_NAME"_adv_compression"    # advanced compression
 
 
 #--------------------------------------------------------------------------------#
@@ -334,7 +335,6 @@ export TUNING_PACK_FEATURES=$TUNING_PACK_FEATURES",'SQL Tuning Advisor','SQL Tun
 export TUNING_PACK_FEATURES=$TUNING_PACK_FEATURES",'Real-Time SQL Monitoring'"
 
 reports_tuning.sh $PROJECT_NAME
-
 
 
 #-------------------------------------------------------------------------------

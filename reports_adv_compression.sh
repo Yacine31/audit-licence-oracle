@@ -20,15 +20,14 @@ DEBUG=0
 export XML_BUFFER
 # on utilise la variable RESULT pour savoir si la requete retourne qq chose avant de passer à l'affichage
 export RESULT=""
+export NOTIN="('SYSMAN')"
 
-
-export SQL="select c.physical_server, d.host_name, d.instance_name, d.name, d.version, 
-d.detected_usages, d.last_usage_date, banner
-from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
+export SQL="select c.physical_server, d.host_name, d.instance_name, d.table_Owner, d.table_name, d.compression, d.compression_for, banner
+from $tVersion v, $tAdvCompression d left join $tCPU c on d.host_name=c.host_name
 where d.host_name=v.host_name and d.instance_name=v.instance_name
-and name in ($ADV_COMP_FEATURES)
+-- and d.table_Owner not in $NOTIN
 and locate('Enterprise', banner) = 0
-order by c.physical_server, d.host_name, d.instance_name, d.name"
+order by c.physical_server, d.host_name, d.instance_name, d.table_Owner"
 
 
 RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
@@ -48,13 +47,12 @@ if [ "$RESULT" != "" ]; then
     close_xml_sheet
 fi
 
-export SQL="select c.physical_server, d.host_name, d.instance_name, d.name, d.version, 
-d.detected_usages, d.last_usage_date, banner
-from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
+export SQL="select c.physical_server, d.host_name, d.instance_name, d.table_Owner, d.table_name, d.compression, d.compression_for, banner
+from $tVersion v, $tAdvCompression d left join $tCPU c on d.host_name=c.host_name
 where d.host_name=v.host_name and d.instance_name=v.instance_name
-and name in ($ADV_COMP_FEATURES)
+-- and d.table_Owner not in $NOTIN
 and locate('Enterprise', banner) > 0
-order by c.physical_server, d.host_name, d.instance_name, d.name"
+order by c.physical_server, d.host_name, d.instance_name, d.table_Owner"
 
 RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 if [ "$RESULT" != "" ]; then
@@ -73,19 +71,25 @@ if [ "$RESULT" != "" ]; then
     #-------------------------------------------------------------------------------
     #--------- Calcul des processeurs : OS != AIX
     #-------------------------------------------------------------------------------
-    export SQL="select distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, c.Total_Cores, Core_Factor, Total_Cores*Core_Factor as Proc_Oracle
-    from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
-    where d.host_name=v.host_name and d.instance_name=v.instance_name
-    and name in ($ADV_COMP_FEATURES)
+    export SELECT_NON_AIX="distinct c.physical_server, c.OS, c.Processor_Type, c.Socket, c.Cores_per_Socket, c.Total_Cores, Core_Factor, Total_Cores*Core_Factor as Proc_Oracle"
+    export FROM="$tVersion v, $tAdvCompression d left join $tCPU c on d.host_name=c.host_name"
+    export WHERE="d.host_name=v.host_name and d.instance_name=v.instance_name
+   --  and table_owner not in $NOTIN
     and locate('Enterprise', banner) > 0
-    and c.os not like '%AIX%'
-    group by c.physical_server 
-    order by c.physical_server"
+    and c.os not like '%AIX%'"
+    export GROUPBY="c.physical_server"
+    export ORDERBY="c.physical_server"
+
+    SQL="select $SELECT_NON_AIX from $FROM where $WHERE group by $GROUPBY order by $ORDERBY"
+    if [ "$DEBUG" == "1" ]; then echo "[DEBUG - $0 ] - $SQL"; fi
 
     RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
     if [ "$RESULT" != "" ]; then
-	echo "Calcul des processeurs Oracle par serveur physique (OS!=AIX) :"
-	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL"
+	# affichage du tableau pour le calcul du nombre de processeur
+        print_proc_oracle $SELECT_NON_AIX'|'$FROM'|'$WHERE
+	
+	# echo "Calcul des processeurs Oracle par serveur physique (OS!=AIX) :"
+	# mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL"
 
 	# export des données
 	export_to_xml
@@ -108,9 +112,9 @@ if [ "$RESULT" != "" ]; then
     c.Active_Physical_CPUs 'APC',
     c.Core_Count ,
     c.Core_Factor"
-    export FROM=" $tVersion a, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name"
+    export FROM=" $tVersion a, $tAdvCompression d left join $tCPU c on d.host_name=c.host_name"
     export WHERE=" d.host_name=a.host_name and d.instance_name=a.instance_name
-    and name in ($ADV_COMP_FEATURES)
+    -- and table_owner not in $NOTIN
     and locate('Enterprise', banner) > 0
     and c.os like '%AIX%'"
 
