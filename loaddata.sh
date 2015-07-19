@@ -4,8 +4,8 @@
 
 # MYSQL_ARGS="--defaults-file=/etc/mysql/debian.cnf"
 # Inclusion des fonctions
-REP_COURANT="/home/merlin/lms_scripts"
-. ${REP_COURANT}/fonctions.sh
+#export SCRIPTS_DIR="/home/merlin/lms_scripts"
+. ${SCRIPTS_DIR}/fonctions.sh
 
 DELIM=";"
 

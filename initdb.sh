@@ -8,8 +8,8 @@ Le script est appelé une fois pour créer les différentes tables dans la BDD
 USAGE
 
 # Inclusion des fonctions
-REP_COURANT="/home/merlin/lms_scripts"
-. ${REP_COURANT}/fonctions.sh
+#export SCRIPTS_DIR="/home/merlin/lms_scripts"
+. ${SCRIPTS_DIR}/fonctions.sh
 
 
 # si aucun paramètre en entrée on quitte

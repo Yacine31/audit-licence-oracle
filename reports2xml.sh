@@ -16,10 +16,10 @@
 export DEBUG=0
 
 # Inclusion des fonctions
-export REP_COURANT="/home/merlin/lms_scripts"
-# REP_COURANT=`dirname $0`
-. ${REP_COURANT}/fonctions.sh
-. ${REP_COURANT}/fonctions_xml.sh
+#export SCRIPTS_DIR="/home/merlin/lms_scripts"
+# SCRIPTS_DIR=`dirname $0`
+. ${SCRIPTS_DIR}/fonctions.sh
+. ${SCRIPTS_DIR}/fonctions_xml.sh
 
 export PROJECT_NAME="$1"
 
@@ -98,17 +98,18 @@ print_xml_header $XML_FILE
 # 
 # select OS, count(*) 'Nombre de serveurs' from $tCPU group by os  union select '--- Tous les OS : ---', count(*) from $tCPU;
 # 
-echo "Statistiques des serveurs et OS :"
+echo $YELLOW"Statistiques des serveurs et OS :"$NOCOLOR
 export SQL="select OS, count(*) 'Nombre de serveurs' from $tCPU group by os union select '--- Total des serveurs ---', count(*) from $tCPU;"
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL" 
 
-echo "Les bases et les versions :"
+echo $YELLOW"Les bases et les versions :"$NOCOLOR
 export SQL="select banner 'Version', count(*) 'Nombre de bases' from $tVersion group by banner 
 union select '--- Total des bases ---', count(*) from $tVersion;"
 mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL" 
 
+echo $YELLOW"Les bases par editions : "$NOCOLOR
+
 export SQL="
-select 'Les bases par editions : ' from dual;
 select concat('Personal Edition   : ', count(*)) from $tVersion where banner like '%Oracle%' and banner like '%Personal%' ;
 select concat('Express Edition    : ', count(*)) from $tVersion where banner like '%Oracle%' and banner like '%Express%' ;
 select concat('Standard Edition   : ', count(*)) from $tVersion where banner like '%Oracle%' and banner not like '%Enterprise%' and banner not like '%Personal%' and banner not like '%Express%' ;
@@ -130,7 +131,7 @@ order by Host_Name;
 "
 RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 if [ "$RESULT" != "" ]; then
-    echo "Les serveurs sans base de données"
+    echo $RED"Les serveurs sans base de données"$NOCOLOR
     mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
 
     # export des données 
@@ -142,7 +143,7 @@ export SQL="SELECT distinct Host_Name FROM $tVersion where Host_Name not in (sel
 
 RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 if [ "$RESULT" != "" ]; then
-    echo "Les serveur sans le résultat de lms_cpuq.sh"
+    echo $RED"Les serveur sans le résultat de lms_cpuq.sh"$NOCOLOR
 
     mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
 
@@ -169,9 +170,11 @@ if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 
 RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 if [ "$RESULT" != "" ]; then
+    echo $YELLOW
     echo "#--------------------------------------------------------------------------------#"
     echo "# Base de données en Standard Edition"
     echo "#--------------------------------------------------------------------------------#"
+    echo $NOCOLOR
 
     echo 
     echo "Les serveurs et bases en Standard Edition :"
@@ -228,9 +231,11 @@ if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 
 RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 if [ "$RESULT" != "" ]; then
+    echo $YELLOW
     echo "#--------------------------------------------------------------------------------#"
     echo "# Bases de données en Enterprise Edition"
     echo "#--------------------------------------------------------------------------------#"
+    echo $NOCOLOR
 
     mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL" 
 
@@ -250,7 +255,7 @@ if [ "$RESULT" != "" ]; then
     RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
     if [ "$RESULT" != "" ]; then
         # affichage du tableau pour le calcul du nombre de processeur
-        print_proc_oracle $SELECT_NON_AIX'|'$FROM'|'$WHERE
+        # print_proc_oracle $SELECT_NON_AIX'|'$FROM'|'$WHERE
         
         # export des données
         export_to_xml
@@ -353,7 +358,7 @@ reports_diagnostics.sh $PROJECT_NAME
 #	- SecureFile Deduplication (user)
 #	- SecureFile Compression (user)
 #-------------------------------------------------------------------------------
-export ADV_COMP_FEATURES="'SecureFiles (user)','SecureFile Deduplication (user)','SecureFile Compression (user)','Backup BZIP2 Compression'"
+export ADV_COMP_FEATURES="'SecureFiles (user)','SecureFile Deduplication (user)','SecureFile Compression (user)','Backup BZIP2 Compression','Oracle Utility Datapump (Export)'"
 
 reports_adv_compression.sh $PROJECT_NAME
 
@@ -379,10 +384,11 @@ reports_rat.sh $PROJECT_NAME
 # fermeture du fichier XML
 print_xml_footer $XML_FILE
 
+echo $YELLOW
 echo "-------------------------------------------------------------------------------"
 echo "Fichier à ouvrir dans Excel : $(pwd)/$XML_FILE"
 echo "-------------------------------------------------------------------------------"
-
+echo $NOCOLOR
 #-------------------------------------------------------------------------------
 # FIN
 #-------------------------------------------------------------------------------

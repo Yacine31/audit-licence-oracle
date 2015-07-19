@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Inclusion des fonctions
-REP_COURANT="/home/merlin/lms_scripts"
-. ${REP_COURANT}/fonctions.sh
-. ${REP_COURANT}/fonctions_xml.sh
+#export SCRIPTS_DIR="/home/merlin/lms_scripts"
+. ${SCRIPTS_DIR}/fonctions.sh
+. ${SCRIPTS_DIR}/fonctions_xml.sh
 
 DEBUG=0
 
@@ -25,11 +25,14 @@ order by physical_server, s.host_name, s.instance_name, s.owner"
 RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 if [ "$RESULT" != "" ]; then
 
+	echo $YELLOW
 	echo "#-------------------------------------------------------------------------------"
 	echo "# Option Spatial/Locator en Standard Edition"
 	echo "#-------------------------------------------------------------------------------"
+	echo $RED
 	echo "Liste des serveurs avec option SPATIAL/LOCATOR en Standard Edition"
 	echo "Pour ces serveurs, vérifier si c'est SPATIAL est FALSE c'est donc LOCATOR qui est mis en oeuvre"
+	echo $NOCOLOR
 
 	if [ "$DEBUG" == "1" ]; then echo "[DEBUG $0] - $SQL"; fi
 	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
@@ -63,11 +66,14 @@ RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 if [ "$RESULT" != "" ]; then
 
 	if [ "$DEBUG" == "1" ]; then echo "[DEBUG $0] - $SQL"; fi
+	echo $YELLOW
 	echo "#-------------------------------------------------------------------------------"
 	echo "# Option Spatial/Locator en Enterprise Edition"
 	echo "#-------------------------------------------------------------------------------"
+	echo $GREEN
 	echo "Liste des serveurs avec option SPATIAL/LOCATOR en Enterprise Edition"
 	echo "Pour ces serveurs, vérifier si c'est SPATIAL est TRUE sinon c'est donc LOCATOR qui est mis en oeuvre"
+	echo $NOCOLOR
 	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
 	export SHEET_NAME=Spatial_SE

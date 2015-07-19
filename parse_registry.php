@@ -56,13 +56,18 @@ foreach($files as $file){
         $config_files = ListIn(dirname(realpath($file)));
 	foreach($config_files as $config_file){
 	    if(strstr($config_file, 'user_projects') && strstr($config_file, 'config/config.xml' )){
+	    // if(strstr($config_file, 'config/config.xml' )){
 		// print "Fichier config xml = " . $working_dir . "/" . $config_file . "\n" ;
 		$xml = simplexml_load_file($working_dir . "/" . $config_file);
 		// domain
 		print "--------\ndomain name = ".$xml->name . "\n--------\n";
 
 		foreach($xml->server as $server){
-		    print "server name = ".$server->name . "\t\t" . "server machine = ".$server->machine . "\t\t" . "cluster = " . $server->cluster . "\n";
+		    print "server name = ".$server->name . "\t\t" ;
+		    print "server machine = ".$server->machine . "\t\t" ;
+		    if ($server->cluster != '')
+			print "cluster = " . $server->cluster;
+		    print "\n";
 		}
 
 		foreach($xml->cluster as $cluster){
@@ -70,8 +75,15 @@ foreach($files as $file){
 		}
 
 		// on cherche les instances migrables :
-		foreach($xml->{'migratable-target'} as $migratable){
-		//    print $migratable->name . "\t" . $migratable->cluster . "\n";
+		if ($xml->{'migratable-target'}){
+		    print "--------\nLes instances migrables ---> Implique EE\n";
+		    print "Name\t\t\t\tPrefered Server\t\tCluster Name\n";
+		    foreach($xml->{'migratable-target'} as $migratable){
+			print $migratable->name . "\t";
+			print $migratable->{'user-preferred-server'} . "\t";
+			Print $migratable->cluster . "\n";
+		    }
+		    print "--------\n";
 		}
 		// on recherhce si WLDF est actif, valeur autre que NONE implique EE
 		if ($xml->server->{'server-diagnostic-config'}){

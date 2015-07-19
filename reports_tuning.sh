@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Inclusion des fonctions
-REP_COURANT="/home/merlin/lms_scripts"
-. ${REP_COURANT}/fonctions.sh
-. ${REP_COURANT}/fonctions_xml.sh
+#export SCRIPTS_DIR="/home/merlin/lms_scripts"
+. ${SCRIPTS_DIR}/fonctions.sh
+. ${SCRIPTS_DIR}/fonctions_xml.sh
 
 #-------------------------------------------------------------------------------
 # Option Tuning Pack
@@ -21,10 +21,13 @@ order by c.physical_server, d.host_name, d.instance_name, d.name"
 RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 if [ "$RESULT" != "" ]; then
 	if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+	echo $YELLOW
 	echo "#-------------------------------------------------------------------------------"
 	echo "# Option Tuning Pack : Standard Edition"
 	echo "#-------------------------------------------------------------------------------"
+	echo $RED
 	echo "# Liste des bases qui utilisent TUNING PACK et qui sont en Standard Edition"
+	echo $NOCOLOR
 	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 	export SHEET_NAME=Tuning_SE
 	# ouverture d'une feuille Excel
@@ -51,10 +54,13 @@ order by c.physical_server, d.host_name, d.instance_name, d.name"
 RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 if [ "$RESULT" != "" ]; then
 	if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+	echo $YELLOW
 	echo "#-------------------------------------------------------------------------------"
 	echo "# Option Tuning Pack : Enterprise Edition"
 	echo "#-------------------------------------------------------------------------------"
+	echo $GREEN 
 	echo "# Liste des bases qui utilisent TUNING PACK et qui sont en Enterprise Edition"
+	echo $NOCOLOR
 	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
 	export SHEET_NAME=Tuning_EE

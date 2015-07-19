@@ -14,6 +14,7 @@
 # 16/01/2015 - get_processor_type corrigée pour les machine SunOS
 # 24/01/2015 - windows : calcul des sockets et coeurs corrigé 
 # 26/01/2015 - Ajout de Model et calcul des procs disponibles/actifs sur SunOS
+# 03/04/2015 - Distinction entre la virtualisation Hyper-V et VMware
  
 
 :<<README
@@ -119,7 +120,8 @@ function get_marque {
 	*Microsoft* )
 	    # windows 2003, 2008
 	    if [ ! "$MARQUE" ]; then
-		MARQUE=`cat "$@" | grep -i '^System' -A2 | grep -i 'Manufacturer:' | sed 's/  Manufacturer: //' | head -1`
+		# MARQUE=`cat "$@" | grep -i '^System' -A2 | grep -i 'Manufacturer:' | sed 's/  Manufacturer: //' | head -1`
+		MARQUE=`cat "$@" |  sed -n -e '/^System/,/EOF/p' | grep -i 'Manufacturer:' | sed 's/  Manufacturer: //' | tail -1`
 	    fi
 	;;
 
@@ -157,7 +159,8 @@ function get_modele {
 
 	    *Microsoft* )
 		# modele pour windows 2003
-		MODEL=`cat "$@" | grep -i '^System' -A3 | grep -i 'Model:' | sed 's/  Model: //' | head -1`
+		# MODEL=`cat "$@" | grep -i '^System' -A3 | grep -i 'Model:' | sed 's/  Model: //' | head -1`
+		MODEL=`cat "$@" |  sed -n -e '/^System/,/EOF/p' | grep -i 'Model:' | sed 's/  Model: //' | tail -1`
 		;;
 
 	    AIX )
@@ -469,12 +472,21 @@ function get_virtuel {
 			;;
 		* )
 			#---
-			# pour la virtualisation VMware, on regarde la marque 
+			# pour la virtualisation VMware, on regarde le modèle 
+			#   VMware = VMware Virtual Platform, Hyper-V = Virtual Machine 
 			#---
-			v_VMWARE=$(echo $MARQUE | grep -i vmware)
-			if [[ "$v_VMWARE" != "" ]]; then
-				VIRTUEL="TRUE"
-				PHYSICAL_SERVER="VMWARE"
+			strV=$(echo $MODEL | grep -i "virtual")
+			if [[ "$strV" != "" ]]; then 
+			    VIRTUEL="TRUE"
+
+			    case $MARQUE in
+				*Microsoft* )
+				    PHYSICAL_SERVER="Hyper-V"
+				;;
+				*VMware* )
+				    PHYSICAL_SERVER="VMWARE"
+				;;
+			    esac
 			fi
 			;;
 	esac
@@ -524,7 +536,6 @@ sed -i "s/\\r//g" $OUTPUT_FILE
 
 echo
 echo "Fin du traitement des fichiers XXXXX-lms_cpuq"
-echo "Fichier de sortie $OUTPUT_FILE"
 echo 
 
-# cat $OUTPUT_FILE
+# rm -fv $OUTPUT_FILE

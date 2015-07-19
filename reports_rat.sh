@@ -1,9 +1,7 @@
 #!/bin/bash
 
-# Inclusion des fonctions
-# REP_COURANT="/home/merlin/lms_scripts"
-. ${REP_COURANT}/fonctions.sh
-. ${REP_COURANT}/fonctions_xml.sh
+. ${SCRIPTS_DIR}/fonctions.sh
+. ${SCRIPTS_DIR}/fonctions_xml.sh
 
 #-------------------------------------------------------------------------------
 # Option Real Application Testing
@@ -22,9 +20,11 @@ RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 if [ "$RESULT" != "" ]; then
 
 	if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+	echo $YELLOW
 	echo "#-------------------------------------------------------------------------------"
 	echo "# Option Real Application Testing"
 	echo "#-------------------------------------------------------------------------------"
+	echo $NOCOLOR
 	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
 	export SHEET_NAME=RAT

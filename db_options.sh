@@ -12,8 +12,8 @@ HISTORIQUE
 DELIM=","
 
 # Inclusion des fonctions
-REP_COURANT="/home/merlin/lms_scripts"
-. ${REP_COURANT}/fonctions.sh
+# SCRIPTS_DIR=$HOME/lms_scripts
+. ${SCRIPTS_DIR}/fonctions.sh
 
 
 function fnSqlProfiles {

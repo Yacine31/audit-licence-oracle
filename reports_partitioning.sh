@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Inclusion des fonctions
-REP_COURANT="/home/merlin/lms_scripts"
-. ${REP_COURANT}/fonctions.sh
-. ${REP_COURANT}/fonctions_xml.sh
+#export SCRIPTS_DIR="/home/merlin/lms_scripts"
+. ${SCRIPTS_DIR}/fonctions.sh
+. ${SCRIPTS_DIR}/fonctions_xml.sh
 
 #--------------------------------------------------------------------------------#
 # Option Partitioning
@@ -25,12 +25,15 @@ order by c.physical_server, a.host_name, a.instance_name;
 RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 if [ "$RESULT" != "" ]; then
 	if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+	echo $YELLOW
 	echo "#--------------------------------------------------------------------------------#"
 	echo "# Option Partitioning"
 	echo "#--------------------------------------------------------------------------------#"
 
 	echo "Liste des serveurs, instances et propriétaire des objets partitionés"
+	echo $RED
 	echo "Les comptes $SQL_NOT_IN ne sont pas pris en compte"
+	echo $NOCOLOR
 	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL"
 
 	export SHEET_NAME=Part

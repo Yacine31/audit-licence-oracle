@@ -83,7 +83,7 @@ echo " <Worksheet ss:Name=\"$SHEET_NAME\">
 function print_xml_sheet {
 
 # remplacer le séparateur par défaut \t par |
-sed -ie 's/\t/|/g' $TMP_FILE
+sed -i 's/\t/|/g' $TMP_FILE
 
 # echo " <Worksheet ss:Name=\"$SHEET_NAME\">
 #   <Table>" >> $XML_FILE
@@ -92,7 +92,7 @@ sed -ie 's/\t/|/g' $TMP_FILE
 echo "<Row></Row>"    >> $XML_FILE
 # insertion de l'entete d'abord : les noms des colonnes
 echo "<Row>"    >> $XML_FILE
-head -1 $TMP_FILE | tr '|' '\n' | while read c
+head -1 $TMP_FILE | tr '|' '\n' | tr '_' ' ' | while read c
 do
         echo "<Cell ss:StyleID=\"TableauEntete\"><Data ss:Type=\"String\">$c</Data></Cell>"  >> $XML_FILE
 done
@@ -120,6 +120,9 @@ do
 	echo "</Row>"   >> $XML_FILE
 done
 
+# insertion d'une ligne vide
+echo "<Row></Row>"    >> $XML_FILE
+
 # suppression du fichier temporaire
 rm -f $TMP_FILE
 
@@ -128,6 +131,19 @@ rm -f $TMP_FILE
 
 }
 
+
+#--------------------------------------------------------------------------------#
+# Ecriture d'un text dans le fichier XML
+#--------------------------------------------------------------------------------#
+function print_to_xml {
+
+    if [ "$1" ]; then
+	# insertion d'une ligne vide
+	echo "<Row></Row>"    >> $XML_FILE
+	echo "<Row><Cell ss:StyleID=\"TableauTexte\"><Data ss:Type=\"String\">$1</Data></Cell></Row>"   >> $XML_FILE
+    fi
+
+}
 
 #--------------------------------------------------------------------------------#
 # fermeture des balise de la feuille excel

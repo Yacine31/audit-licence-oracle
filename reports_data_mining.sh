@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Inclusion des fonctions
-REP_COURANT="/home/merlin/lms_scripts"
-. ${REP_COURANT}/fonctions.sh
-. ${REP_COURANT}/fonctions_xml.sh
+#export SCRIPTS_DIR="/home/merlin/lms_scripts"
+. ${SCRIPTS_DIR}/fonctions.sh
+. ${SCRIPTS_DIR}/fonctions_xml.sh
 
 DEBUG=0
 
@@ -23,9 +23,11 @@ order by physical_server, d.host_name, d.instance_name, d.owner
 RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 if [ "$RESULT" != "" ]; then
 	if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+	echo $YELLOW
 	echo "#-------------------------------------------------------------------------------"
 	echo "# Option Data Mining"
 	echo "#-------------------------------------------------------------------------------"
+	echo $NOCOLOR
 	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL"
 
 	export SHEET_NAME=DataMining

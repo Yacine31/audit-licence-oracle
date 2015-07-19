@@ -31,17 +31,17 @@ export CPU_TABLE=${PROJECT_NAME}"_cpu"
 export PATH=$SCRIPTS_DIR:$PATH
 
 # appeler le script d'initialisation de la base
-$SCRIPTS_DIR/initdb.sh $PROJECT_NAME
+$SCRIPTS_DIR/initdb.sh $PROJECT_NAME 2>/dev/null
 
 # appeler la consolidation des fichiers lms_cpu
-$SCRIPTS_DIR/lms_cpu.sh $CPU_CSV
+$SCRIPTS_DIR/lms_cpu.sh $CPU_CSV 2>/dev/null
 
 # intégrer les données à la base mysql
 echo "import des données serveurs dans MySQL ..."
 $SCRIPTS_DIR/loaddata.sh $CPU_CSV $CPU_TABLE 2>/dev/null
 
 # générer les options de la base et les packs d'admin 
-$SCRIPTS_DIR/db_options.sh $PROJECT_NAME
+$SCRIPTS_DIR/db_options.sh $PROJECT_NAME 2>/dev/null
 
 # générer le rapport
-$SCRIPTS_DIR/reports2xml.sh $PROJECT_NAME
+$SCRIPTS_DIR/reports2xml.sh $PROJECT_NAME 2>/dev/null

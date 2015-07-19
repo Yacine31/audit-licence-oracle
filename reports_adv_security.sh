@@ -1,13 +1,14 @@
 #!/bin/bash
 
 # Inclusion des fonctions
-REP_COURANT="/home/merlin/lms_scripts"
-. ${REP_COURANT}/fonctions.sh
-. ${REP_COURANT}/fonctions_xml.sh
+#export SCRIPTS_DIR="/home/merlin/lms_scripts"
+. ${SCRIPTS_DIR}/fonctions.sh
+. ${SCRIPTS_DIR}/fonctions_xml.sh
 
 #-------------------------------------------------------------------------------
 # Option Advanced Security 
 #-------------------------------------------------------------------------------
+export DEBUG=0
 
 export SQL="select c.physical_server, d.host_name, d.instance_name, d.name, d.version, 
 d.detected_usages, d.last_usage_date, banner
@@ -20,9 +21,12 @@ order by c.physical_server, d.host_name, d.instance_name, d.name"
 RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 if [ "$RESULT" != "" ]; then
 	if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+	echo $YELLOW
 	echo "#-------------------------------------------------------------------------------"
-	echo "# Option Advanced Security : Standard Edition"
+	echo "# Option Advanced Security : $RED Standard Edition $NOCOLOR"
+	echo $YELLOW
 	echo "#-------------------------------------------------------------------------------"
+	echo $NOCOLOR
 	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 
 	export SHEET_NAME=AdvSec_SE
@@ -34,21 +38,24 @@ if [ "$RESULT" != "" ]; then
 	close_xml_sheet
 fi
 
+export SQL="select c.physical_server, d.host_name, d.instance_name, d.name, d.version, 
+d.detected_usages, d.last_usage_date, banner
+from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
+where d.host_name=v.host_name and d.instance_name=v.instance_name
+and name in ($ADV_SECURITY_FEATURES)
+and locate('Enterprise', banner) > 0
+order by c.physical_server, d.host_name, d.instance_name, d.name"
+
+if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+
 RESULT=$(mysql -u${MYSQL_USER} -p${MYSQL_PWD} --database=${MYSQL_DB} -e "$SQL")
 if [ "$RESULT" != "" ]; then
 
-	export SQL="select c.physical_server, d.host_name, d.instance_name, d.name, d.version, 
-	d.detected_usages, d.last_usage_date, banner
-	from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
-	where d.host_name=v.host_name and d.instance_name=v.instance_name
-	and name in ($ADV_SECURITY_FEATURES)
-	and locate('Enterprise', banner) > 0
-	order by c.physical_server, d.host_name, d.instance_name, d.name"
-
-	if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
+	echo $YELLOW
 	echo "#-------------------------------------------------------------------------------"
 	echo "# Option Advanced Security : Enterprise Edition"
 	echo "#-------------------------------------------------------------------------------"
+	echo $NOCOLOR
 	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"
 	
 	export SHEET_NAME=AdvSec_EE
