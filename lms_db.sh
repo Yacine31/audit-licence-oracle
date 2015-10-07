@@ -104,27 +104,21 @@ find -type f -iname "$VERSION_FILE" | while read f_version
 do 
 	# dos2unix $f_version
 	INSTANCE_NAME=$(cat $f_version | sed '5!d' | cut -d',' -f4)
-
 	HOST_NAME=$(cat $f_version | sed '5!d' | cut -d',' -f3)
 
 	echo -e "Traitement de la base ${INSTANCE_NAME} \t sur le serveur ${HOST_NAME}"
 
-
-
-	DB_EDITION=$(cat $f_version | sed '5!d' | egrep -o 'Personal|Enterprise')
+	DB_EDITION=$(cat $f_version | sed '5!d' | egrep -o 'Express|Personal|Enterprise')
 	if [ ! "${DB_EDITION}" ]; then DB_EDITION="Standard"; fi
 
 	f_users=$(find -type f -iname ${HOST_NAME}_${INSTANCE_NAME}${USERS_FILE} | head -1)
 
 	DB_CREATED_DATE=$(cat $f_users | grep '^0,SYSTEM,' | cut -d',' -f6 | cut -d'_' -f1)
-# done
-# exit
 
 	BANNER=$(cat $f_version | sed '5!d' | cut -d',' -f2)
 	DB_VERSION_MIN=$(echo ${BANNER//[a-zA-Z]/ } | cut -d' ' -f3)
 	DB_VERSION_MAJ=$(echo $DB_VERSION_MIN | cut -d'.' -f1)
 
-	# PLATFORM_TYPE=`echo ${BANNER//[a-zA-Z]/ } | cut -d' ' -f4`
 	PLATFORM_NAME=$(cat $f_version | grep '^0,"TNS' | cut -d',' -f2 | sed 's/"TNS for //g' | cut -d':' -f1)
 
 	f_licence=$(find -type f -iname ${HOST_NAME}_${INSTANCE_NAME}${LICENSE_FILE} | head -1)

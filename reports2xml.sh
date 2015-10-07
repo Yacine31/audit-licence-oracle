@@ -303,7 +303,6 @@ reports_rac.sh $PROJECT_NAME
 
 reports_partitioning.sh $PROJECT_NAME
 
-
 #--------------------------------------------------------------------------------#
 # Option OLAP
 #--------------------------------------------------------------------------------#
@@ -316,7 +315,6 @@ reports_olap.sh $PROJECT_NAME
 
 reports_data_mining.sh
 
-
 #-------------------------------------------------------------------------------
 # Option Spatial/Locator
 #-------------------------------------------------------------------------------
@@ -327,7 +325,7 @@ reports_spatial.sh $PROJECT_NAME
 # Option Active Data Guard
 #-------------------------------------------------------------------------------
 
-export ACTIVE_DG_FEATURES="'%Active Data Guard%'"
+export ACTIVE_DG_FEATURES="'%Active Data Guard%','Global Data Services'"
 
 reports_active_dg.sh $PROJECT_NAME
 
@@ -337,7 +335,7 @@ reports_active_dg.sh $PROJECT_NAME
 
 export TUNING_PACK_FEATURES="'SQL Access Advisor','SQL Monitoring and Tuning pages','SQL Performance Analyzer','SQL Profile'"
 export TUNING_PACK_FEATURES=$TUNING_PACK_FEATURES",'SQL Tuning Advisor','SQL Tuning Set','SQL Tuning Set (user)','Tuning Pack'"
-export TUNING_PACK_FEATURES=$TUNING_PACK_FEATURES",'Real-Time SQL Monitoring'"
+export TUNING_PACK_FEATURES=$TUNING_PACK_FEATURES",'Real-Time SQL Monitoring','Automatic Maintenance - SQL Tuning Advisor','Automatic SQL Tuning Advisor'"
 
 reports_tuning.sh $PROJECT_NAME
 
@@ -346,8 +344,9 @@ reports_tuning.sh $PROJECT_NAME
 # Option Diagnostics Pack
 #-------------------------------------------------------------------------------
 
-export DIAG_PACK_FEATURES="'ADDM','Automatic Database Diagnostic Monitor'"
+export DIAG_PACK_FEATURES="'ADDM','Automatic Database Diagnostic Monitor','AWR Baseline Template'"
 export DIAG_PACK_FEATURES=$DIAG_PACK_FEATURES",'Automatic Workload Repository','AWR Baseline','AWR Report','Active Session History'"
+export DIAG_PACK_FEATURES=$DIAG_PACK_FEATURES",'Baseline Adaptive Thresholds','Baseline Static Computations'"
 export DIAG_PACK_FEATURES=$DIAG_PACK_FEATURES",'Diagnostic Pack','EM Performance Page','Active Session History','EM Notification'"
 
 reports_diagnostics.sh $PROJECT_NAME
@@ -358,7 +357,8 @@ reports_diagnostics.sh $PROJECT_NAME
 #	- SecureFile Deduplication (user)
 #	- SecureFile Compression (user)
 #-------------------------------------------------------------------------------
-export ADV_COMP_FEATURES="'SecureFiles (user)','SecureFile Deduplication (user)','SecureFile Compression (user)','Backup BZIP2 Compression','Oracle Utility Datapump (Export)'"
+# export ADV_COMP_FEATURES="'SecureFiles (user)','SecureFile Deduplication (user)','SecureFile Compression (user)','Backup BZIP2 Compression','Oracle Utility Datapump (Export)'"
+export ADV_COMP_FEATURES="'SecureFiles (user)','SecureFile Deduplication (user)','SecureFile Compression (user)','Backup BZIP2 Compression','Oracle Utility Datapump (Export)','Oracle Utility Datapump (Import)','Information Lifecycle Management','Hybrid Columnar Compression Row Level Locking','Heat Map','HeapCompression','Flashback Data Archive','Backup ZLIB Compression','Backup MEDIUM Compression','Backup LOW Compression','Backup HIGH Compression','ADVANCED Index Compression','Advanced Index Compression'"
 
 reports_adv_compression.sh $PROJECT_NAME
 
@@ -366,16 +366,23 @@ reports_adv_compression.sh $PROJECT_NAME
 # Advanced Security
 #-------------------------------------------------------------------------------
 
-export ADV_SECURITY_FEATURES="'Transparent Data Encryption','Backup Encryption','SecureFile Encryption (user)'"
+export ADV_SECURITY_FEATURES="'Transparent Data Encryption','Backup Encryption','SecureFile Encryption (user)','Encrypted Tablespaces','Data Redaction'"
 
 reports_adv_security.sh $PROJECT_NAME
 
+#-------------------------------------------------------------------------------
+# Database Vault
+#-------------------------------------------------------------------------------
+
+export DB_VAULT_FEATURES="'Oracle Database Vault','Privilege Capture'"
+
+reports_db_vault.sh $PROJECT_NAME
 
 #-------------------------------------------------------------------------------
 # Real Application Testing
 #-------------------------------------------------------------------------------
 
-export RAT_FEATURES="'Database Replay: Workload Capture','Database Replay: Workload Capture','SQL Performance Analyzer'"
+export RAT_FEATURES="'Database Replay: Workload Capture','Database Replay: Workload Replay','SQL Performance Analyzer'"
 
 reports_rat.sh $PROJECT_NAME
 

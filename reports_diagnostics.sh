@@ -11,7 +11,8 @@
 DEBUG=0
 
 export SQL="select c.physical_server, d.host_name, d.instance_name, d.name, d.version, 
-d.detected_usages, d.last_usage_date, banner
+d.detected_usages, d.last_usage_date
+-- , banner
 from $tVersion a, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
 where d.host_name=a.host_name and d.instance_name=a.instance_name
 and name in ($DIAG_PACK_FEATURES)
@@ -39,7 +40,8 @@ if [ "$RESULT" != "" ]; then
 fi
 
 export SQL="select c.physical_server, d.host_name, d.instance_name, d.name, d.version, 
-d.detected_usages, d.last_usage_date, banner
+d.detected_usages, d.last_usage_date
+-- , banner
 from $tVersion a, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
 where d.host_name=a.host_name and d.instance_name=a.instance_name
 and name in ($DIAG_PACK_FEATURES)
@@ -135,7 +137,8 @@ if [ "$RESULT" != "" ]; then
 	# Il faut les ajouter au comptage des licences Diagnostics Pack
 	#-------------------------------------------------------------------------------
 
-	export SQL="select distinct physical_server, d.host_name, c.os, d.instance_name, d.name, d.version, banner 
+	export SQL="select distinct physical_server, d.host_name, c.os, d.instance_name, d.name, d.version
+        -- , banner 
 	from $tVersion a, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name 
 	where d.host_name=a.host_name and d.instance_name=a.instance_name 
 	and d.name in ($TUNING_PACK_FEATURES)

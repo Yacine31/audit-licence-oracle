@@ -40,10 +40,11 @@ r.database_name 'Database Name',
 r.rac_instance 'Instance Name',
 r.nodes_count 'Nodes Count',
 r.node_id 'Node ID',
-if(locate('Enterprise', banner)>0, 'Enterprise', if(locate('Standard', banner)>0,'Standard','ND')) Edition ,
-c.Model,
-c.OS,
-c.Processor_Type"
+if(locate('Enterprise', banner)>0, 'Enterprise', if(locate('Standard', banner)>0,'Standard','ND')) Edition
+-- c.Model,
+-- c.OS,
+-- c.Processor_Type
+"
 
 # export FROM="$tCPU c left join $tRAC r left join $tVersion v on r.node_name=v.host_name on c.host_name=r.node_name"
 export FROM="$tRAC r left join $tCPU c left join $tVersion v on c.host_name=v.host_name on r.node_name=c.host_name"
@@ -59,8 +60,8 @@ if [ "$RESULT" != "" ]; then
 	echo "#--------------------------------------------------------------------------------#"
 	echo "# Option RAC "
 	echo "#--------------------------------------------------------------------------------#"
-	echo "Les serveurs avec option RAC en $RED Enterprise Edition"
-	echo $NOCOLOR
+	echo "Les serveurs avec option RAC en $RED Enterprise Edition $NOCOLOR"
+
 
 	if [ "$DEBUG" == "1" ]; then echo "[DEBUG] - $SQL"; fi
 	mysql -u${MYSQL_USER} -p${MYSQL_PWD} --local-infile --database=${MYSQL_DB} -e "$SQL"

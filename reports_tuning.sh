@@ -11,7 +11,8 @@
 #-------------------------------------------------------------------------------
 
 export SQL="select c.physical_server, d.host_name, d.instance_name, d.name, d.version, 
-d.detected_usages, d.last_usage_date, banner
+d.detected_usages, d.last_usage_date
+-- , banner
 from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
 where d.host_name=v.host_name and d.instance_name=v.instance_name
 and name in ($TUNING_PACK_FEATURES)
@@ -44,7 +45,8 @@ fi
 #-------------------------------------------------------------------------------
 
 export SQL="select c.physical_server, d.host_name, d.instance_name, d.name, d.version, 
-d.detected_usages, d.last_usage_date, banner
+d.detected_usages, d.last_usage_date
+-- , banner
 from $tVersion v, $tDbaFeatures d left join $tCPU c on d.host_name=c.host_name
 where d.host_name=v.host_name and d.instance_name=v.instance_name
 and name in ($TUNING_PACK_FEATURES)
